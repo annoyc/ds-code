@@ -5110,8 +5110,11 @@ export class InteractiveMode {
 		info += `${theme.fg("dim", "Total:")} ${stats.tokens.total.toLocaleString()}\n`;
 
 		if (stats.cost > 0) {
+			const isCny = process.env.DS_COST_CURRENCY === "cny";
+			const currencySymbol = isCny ? "¥" : "$";
+			const displayCost = isCny ? stats.cost * 7.3 : stats.cost;
 			info += `\n${theme.bold("Cost")}\n`;
-			info += `${theme.fg("dim", "Total:")} ${stats.cost.toFixed(4)}`;
+			info += `${theme.fg("dim", "Total:")} ${currencySymbol}${displayCost.toFixed(4)}`;
 		}
 
 		this.chatContainer.addChild(new Spacer(1));

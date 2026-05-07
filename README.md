@@ -1,78 +1,317 @@
-<p align="center">
-  <a href="https://pi.dev">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://pi.dev/logo.svg">
-      <source media="(prefers-color-scheme: light)" srcset="https://huggingface.co/buckets/julien-c/my-training-bucket/resolve/pi-logo-dark.svg">
-      <img alt="pi logo" src="https://pi.dev/logo.svg" width="128">
-    </picture>
-  </a>
-</p>
-<p align="center">
-  <a href="https://discord.com/invite/3cU7Bz4UPx"><img alt="Discord" src="https://img.shields.io/badge/discord-community-5865F2?style=flat-square&logo=discord&logoColor=white" /></a>
-  <a href="https://github.com/badlogic/pi-mono/actions/workflows/ci.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/badlogic/pi-mono/ci.yml?style=flat-square&branch=main" /></a>
-</p>
-<p align="center">
-  <a href="https://pi.dev">pi.dev</a> domain graciously donated by
-  <br /><br />
-  <a href="https://exe.dev"><img src="packages/coding-agent/docs/images/exy.png" alt="Exy mascot" width="48" /><br />exe.dev</a>
-</p>
+**ds-code**
 
-> New issues and PRs from new contributors are auto-closed by default. Maintainers review auto-closed issues daily. See [CONTRIBUTING.md](CONTRIBUTING.md).
+*DeepSeek 终端编程智能体 —— 基于 pi-mono 构建的 AI Coding Agent*
+
+[快速开始](#快速开始) • [核心特性](#核心特性) • [架构概览](#架构概览) • [配置](#配置) • [开发指南](#开发指南) • [English](README.en.md)
 
 ---
 
-# Pi Monorepo
+## 这是什么？
 
-> **Looking for the pi coding agent?** See **[packages/coding-agent](packages/coding-agent)** for installation and usage.
+`dsCode` 是一个运行在终端中的 AI 编程智能体。它基于 [pi-mono](https://github.com/badlogic/pi-mono) 构建，提供了独立的 `dsc` 命令行工具，默认使用 DeepSeek V4 系列模型，同时支持多模型切换，并提供成本感知路由、递归语言模型（RLM）、子智能体编排、执行策略引擎等能力。
 
-Tools for building AI agents.
+`dsc` 会自动配置 DeepSeek 作为默认模型提供商，根据实际使用的模型动态注入身份提示词，并提供中文友好的配置和错误提示。
 
-## Share your OSS coding agent sessions
+## 快速开始
 
-If you use pi or other coding agents for open source work, please share your sessions.
-
-Public OSS session data helps improve coding agents with real-world tasks, tool use, failures, and fixes instead of toy benchmarks.
-
-For the full explanation, see [this post on X](https://x.com/badlogicgames/status/2037811643774652911).
-
-To publish sessions, use [`badlogic/pi-share-hf`](https://github.com/badlogic/pi-share-hf). Read its README.md for setup instructions. All you need is a Hugging Face account, the Hugging Face CLI, and `pi-share-hf`.
-
-You can also watch [this video](https://x.com/badlogicgames/status/2041151967695634619), where I show how I publish my `pi-mono` sessions.
-
-I regularly publish my own `pi-mono` work sessions here:
-
-- [badlogicgames/pi-mono on Hugging Face](https://huggingface.co/datasets/badlogicgames/pi-mono)
-
-## Packages
-
-| Package | Description |
-|---------|-------------|
-| **[@mariozechner/pi-ai](packages/ai)** | Unified multi-provider LLM API (OpenAI, Anthropic, Google, etc.) |
-| **[@mariozechner/pi-agent-core](packages/agent)** | Agent runtime with tool calling and state management |
-| **[@mariozechner/pi-coding-agent](packages/coding-agent)** | Interactive coding agent CLI |
-| **[@mariozechner/pi-tui](packages/tui)** | Terminal UI library with differential rendering |
-| **[@mariozechner/pi-web-ui](packages/web-ui)** | Web components for AI chat interfaces |
-
-## Chat bot workflows
-
-For Slack/chat automation, see [earendil-works/pi-chat](https://github.com/earendil-works/pi-chat).
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [AGENTS.md](AGENTS.md) for project-specific rules (for both humans and agents).
-
-## Development
+### 1. 安装
 
 ```bash
-npm install          # Install all dependencies
-npm run build        # Build all packages
-npm run check        # Lint, format, and type check
-./test.sh            # Run tests (skips LLM-dependent tests without API keys)
-./pi-test.sh         # Run pi from sources (can be run from any directory)
+git clone https://github.com/yourorg/dsCode.git
+cd dsCode
+npm install --ignore-scripts
+npm run build
 ```
 
-> **Note:** `npm run check` requires `npm run build` to be run first. The web-ui package uses `tsc` which needs compiled `.d.ts` files from dependencies.
+### 2. 配置 API Key
 
-## License
+三种方式任选其一：
 
-MIT
+```bash
+# 方式 1: 环境变量（推荐）
+export DEEPSEEK_API_KEY=sk-your-key-here
+
+# 方式 2: 配置文件
+mkdir -p ~/.ds/agent
+echo '{"apiKey":"sk-your-key-here"}' > ~/.ds/agent/config.json
+
+# 方式 3: 命令行参数
+dsc --api-key sk-your-key-here "你的提示词"
+```
+
+> 获取 API Key: [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys)
+
+### 3. 开始使用
+
+```bash
+npx dsc                              # 交互式 TUI 模式
+npx dsc "解释这段代码的作用"            # 单次提示
+npx dsc --model deepseek-v4-flash     # 指定模型
+npx dsc --reasoning high "重构这个函数" # 指定推理深度
+npx dsc --mode yolo "添加单元测试"      # 全自动模式（跳过审批）
+```
+
+---
+
+## 核心特性
+
+### 成本感知系统
+
+
+| 特性         | 说明                                                  |
+| ---------- | --------------------------------------------------- |
+| **实时定价引擎** | 内置 DeepSeek V4 Pro/Flash 费率，支持缓存命中/未命中差异定价，自动追踪限时折扣 |
+| **成本追踪器**  | 每轮对话的 token 使用量和费用统计，默认人民币（CNY）显示                   |
+| **智能路由**   | 根据任务复杂度自动选择 Flash 或 Pro 模型，根据操作模式动态调整推理深度           |
+
+
+### 递归语言模型 - RLM
+
+
+| 特性                 | 说明                                                    |
+| ------------------ | ----------------------------------------------------- |
+| **RLM Bridge**     | 处理超长上下文：将大文件/代码库分块，委托给轻量子模型（默认 `deepseek-v4-flash`）分析 |
+| **批量查询**           | 支持 `llm_query_batched`，一次性提交多个分析任务                    |
+| **Python REPL 集成** | 可选的 Python 侧车进程，通过 JSON-RPC 扩展分析能力                    |
+| **递归深度控制**         | 可配置最大递归深度，防止无限递归消耗                                    |
+
+
+### 子智能体编排
+
+
+| 特性        | 说明                                                                                         |
+| --------- | ------------------------------------------------------------------------------------------ |
+| **角色类型**  | 7 种预定义角色：`general` / `explore` / `plan` / `review` / `implementer` / `verifier` / `custom` |
+| **并发控制**  | 最多 20 个并发子智能体，带资源租约避免文件写冲突                                                                 |
+| **结构化输出** | 统一的 Summary / Evidence / Changes / Risks / Blockers 返回格式                                   |
+| **持久化**   | 子智能体状态可序列化到 JSON，支持会话恢复                                                                    |
+| **工具集**   | `agent_spawn` / `agent_wait` / `agent_message` / `agent_cancel` / `agent_list`             |
+
+
+### 执行策略引擎
+
+
+| 特性         | 说明                                                                   |
+| ---------- | -------------------------------------------------------------------- |
+| **分层规则**   | 三层策略叠加：`builtinDefault` < `agent` < `user`，拒绝规则优先                    |
+| **命令参数感知** | 内置 150+ 条命令的子命令表（如 `git status` vs `git push --force`），精确到子命令级别的策略匹配 |
+| **安全默认值**  | 只读命令（`ls`、`cat`、`git log`）默认信任，危险命令（`rm -rf`、`git push --force`）默认拒绝 |
+| **审批流**    | 未知命令触发审批请求，可附带信任修正建议                                                 |
+
+
+### LSP 诊断集成
+
+
+| 特性        | 说明                                                           |
+| --------- | ------------------------------------------------------------ |
+| **自动诊断**  | 编辑后自动获取语言服务器的错误/警告信息                                         |
+| **多语言支持** | 内置 `typescript-language-server`、`pyright`、`rust-analyzer` 配置 |
+| **上下文注入** | 诊断结果自动注入模型上下文，引导下一轮修复                                        |
+
+
+### 韧性会话
+
+
+| 特性              | 说明                                        |
+| --------------- | ----------------------------------------- |
+| **Side-Git 快照** | 每轮对话前自动创建 `git stash` 快照（上限 50 个），不影响项目仓库 |
+| **快照回滚**        | 支持按 `turnId` 恢复到任意历史状态                    |
+| **缓存感知压缩**      | 预留接口，用于大上下文场景的智能压缩（开发中）                   |
+
+
+### 继承自 pi-mono
+
+所有 pi-mono 的核心能力均完整保留：
+
+- 文件读写、代码编辑、Bash 命令执行
+- 交互式 TUI / JSON / RPC 三种运行模式
+- 会话保存与恢复
+- 扩展系统（extensions / skills / themes）
+- 多模型支持与 Ctrl+P 模型切换
+- 项目上下文文件（AGENTS.md）自动加载
+
+---
+
+## 架构概览
+
+```
+dsCode/
+├── packages/
+│   ├── ai/              @mariozechner/pi-ai          # 统一多模型 LLM API
+│   ├── agent/           @mariozechner/pi-agent-core   # Agent 运行时（工具调用、状态管理）
+│   ├── coding-agent/    @mariozechner/pi-coding-agent # 编程 Agent CLI（pi 命令）
+│   ├── tui/             @mariozechner/pi-tui          # 终端 UI 库（差分渲染）
+│   ├── ds-core/         @deepseek/ds-core             # DeepSeek 核心库（定价/RLM/子智能体/策略/LSP/会话）
+│   └── ds-agent/        @deepseek/ds-agent            # dsc CLI 入口
+└── ...
+```
+
+**调用链路：**
+
+```
+dsc CLI → 参数转换 + 身份提示词注入 + API Key 检测
+        → pi-coding-agent main()
+        → 模型解析 → DeepSeek V4 Pro/Flash
+        → Agent Loop（工具调用 → 审批 → 执行 → 反馈）
+        → TUI 渲染 / JSON 输出 / RPC 服务
+```
+
+---
+
+## 运行模式
+
+
+| 模式        | 触发方式          | 行为                        |
+| --------- | ------------- | ------------------------- |
+| **Plan**  | `--mode plan` | 只读模式 —— 只能读取文件和搜索，不做任何修改  |
+| **Agent** | 默认            | 交互模式 —— 写操作需要用户审批         |
+| **YOLO**  | `--mode yolo` | 全自动模式 —— 所有操作自动执行，适合可信工作区 |
+
+
+---
+
+## 配置
+
+### 配置文件
+
+配置文件位于 `~/.ds/agent/config.json`：
+
+```json
+{
+  "model": "deepseek-v4-pro",
+  "reasoningEffort": "medium",
+  "mode": "agent",
+  "autoModel": true,
+  "autoReasoning": true,
+  "costCurrency": "cny",
+  "lspEnabled": false,
+  "apiKey": "sk-your-key-here",
+  "execPolicy": {
+    "trustedPrefixes": ["npm test", "cargo build"],
+    "deniedPrefixes": ["rm -rf /"]
+  }
+}
+```
+
+### 环境变量
+
+
+| 变量                    | 说明                                               |
+| --------------------- | ------------------------------------------------ |
+| `DEEPSEEK_API_KEY`    | DeepSeek API 密钥                                  |
+| `DS_MODEL`            | 默认模型（覆盖配置文件）                                     |
+| `DS_REASONING_EFFORT` | 默认推理深度：`off` / `low` / `medium` / `high` / `max` |
+| `DS_MODE`             | 默认模式：`plan` / `agent` / `yolo`                   |
+| `DS_DEBUG`            | 设为 `1` 输出调试信息（显示传递给 pi 的参数）                      |
+
+
+### 命令行参数
+
+```
+dsc [选项] [提示词]
+
+选项：
+  --mode <plan|agent|yolo>    执行模式（默认: agent）
+  --model <model>             模型名称（默认: deepseek-v4-pro）
+  --reasoning <effort>        推理深度: off|low|medium|high|max
+  --api-key <key>             DeepSeek API Key
+  --json                      JSON 输出模式
+  --rpc                       RPC 服务模式
+  -v, --version               显示版本
+  -h, --help                  显示帮助
+```
+
+---
+
+## 模型与定价
+
+
+| 模型                  | 上下文窗口     | 输入（缓存命中） | 输入（缓存未命中） | 输出      |
+| ------------------- | --------- | -------- | --------- | ------- |
+| `deepseek-v4-pro`   | 1M tokens | ¥0.026/M | ¥3.14/M   | ¥6.28/M |
+| `deepseek-v4-flash` | 1M tokens | ¥0.020/M | ¥1.01/M   | ¥2.02/M |
+
+
+> V4 Pro 目前享受 75% 限时折扣，有效期至 2026 年 5 月 31 日 15:59 UTC。
+> 最新价格请查阅 [DeepSeek 官方定价页](https://api-docs.deepseek.com/zh-cn/quick_start/pricing)。
+
+---
+
+## 包一览
+
+
+| 包名               | npm 包名                          | 说明                                                |
+| ---------------- | ------------------------------- | ------------------------------------------------- |
+| **ds-agent**     | `@deepseek/ds-agent`            | `dsc` 命令行入口，参数转换与 DeepSeek 配置                     |
+| **ds-core**      | `@deepseek/ds-core`             | DeepSeek 核心库：定价、路由、RLM、子智能体、策略、LSP、会话             |
+| **ai**           | `@mariozechner/pi-ai`           | 统一多模型 LLM API（OpenAI、Anthropic、Google、DeepSeek 等） |
+| **agent**        | `@mariozechner/pi-agent-core`   | Agent 运行时：传输抽象、工具调用、状态管理                          |
+| **coding-agent** | `@mariozechner/pi-coding-agent` | 交互式编程 Agent CLI                                   |
+| **tui**          | `@mariozechner/pi-tui`          | 终端 UI 库（差分渲染）                                     |
+
+
+---
+
+## 开发指南
+
+### 环境要求
+
+- Node.js >= 20.0.0
+- npm >= 9
+
+### 构建
+
+```bash
+npm install --ignore-scripts   # 安装依赖（跳过原生编译）
+npm run build                  # 按依赖顺序构建所有包
+```
+
+构建顺序：`tui` → `ai` → `agent` → `coding-agent` → `ds-core` → `ds-agent`
+
+### 单独构建某个包
+
+```bash
+cd packages/ds-core && npm run build
+cd packages/ds-agent && npm run build
+```
+
+### 检查
+
+```bash
+npm run check    # Lint + 格式化 + 类型检查（需要先 build）
+```
+
+### 从源码运行
+
+```bash
+# 交互模式
+DEEPSEEK_API_KEY=sk-xxx npx dsc
+
+# 调试模式（显示传递给 pi 的参数）
+DS_DEBUG=1 DEEPSEEK_API_KEY=sk-xxx npx dsc --print "hello"
+```
+
+---
+
+## 路线图
+
+- ds-core 能力全面集成到 dsc CLI（定价仪表盘、RLM 工具、子智能体命令）
+- Auto Mode：自动选择 Flash/Pro + 推理深度
+- 前缀缓存控制优化
+- 缓存感知上下文压缩
+- Web UI 集成
+- 插件市场
+
+---
+
+## 致谢
+
+本项目基于 [pi-mono](https://github.com/badlogic/pi-mono) 构建，感谢 [@badlogic](https://github.com/badlogic) 及所有 pi-mono 贡献者的出色工作。
+
+参考项目：[DeepSeek-TUI](https://github.com/Hmbown/DeepSeek-TUI)
+
+---
+
+## 许可证
+
+[MIT](LICENSE)

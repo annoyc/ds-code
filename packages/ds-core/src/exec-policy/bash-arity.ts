@@ -1,0 +1,267 @@
+export const BASH_ARITY_TABLE: ReadonlyArray<readonly [string, number]> = [
+	["git add", 2],
+	["git am", 2],
+	["git apply", 2],
+	["git bisect", 2],
+	["git blame", 2],
+	["git branch", 2],
+	["git cat-file", 2],
+	["git checkout", 2],
+	["git cherry-pick", 2],
+	["git clean", 2],
+	["git clone", 2],
+	["git commit", 2],
+	["git config", 2],
+	["git describe", 2],
+	["git diff", 2],
+	["git fetch", 2],
+	["git format-patch", 2],
+	["git grep", 2],
+	["git init", 2],
+	["git log", 2],
+	["git ls-files", 2],
+	["git merge", 2],
+	["git mv", 2],
+	["git notes", 2],
+	["git pull", 2],
+	["git push", 2],
+	["git rebase", 2],
+	["git reflog", 2],
+	["git remote", 2],
+	["git reset", 2],
+	["git restore", 2],
+	["git revert", 2],
+	["git rm", 2],
+	["git show", 2],
+	["git stash", 2],
+	["git status", 2],
+	["git submodule", 2],
+	["git switch", 2],
+	["git tag", 2],
+	["git worktree", 2],
+	["npm audit", 2],
+	["npm build", 2],
+	["npm cache", 2],
+	["npm ci", 2],
+	["npm dedupe", 2],
+	["npm fund", 2],
+	["npm help", 2],
+	["npm info", 2],
+	["npm init", 2],
+	["npm install", 2],
+	["npm link", 2],
+	["npm list", 2],
+	["npm ls", 2],
+	["npm outdated", 2],
+	["npm pack", 2],
+	["npm prune", 2],
+	["npm publish", 2],
+	["npm rebuild", 2],
+	["npm run", 3],
+	["npm start", 2],
+	["npm stop", 2],
+	["npm test", 2],
+	["npm uninstall", 2],
+	["npm update", 2],
+	["npm version", 2],
+	["npm view", 2],
+	["yarn add", 2],
+	["yarn audit", 2],
+	["yarn build", 2],
+	["yarn install", 2],
+	["yarn run", 3],
+	["yarn start", 2],
+	["yarn test", 2],
+	["yarn upgrade", 2],
+	["yarn workspace", 3],
+	["pnpm add", 2],
+	["pnpm build", 2],
+	["pnpm install", 2],
+	["pnpm run", 3],
+	["pnpm start", 2],
+	["pnpm test", 2],
+	["pnpm update", 2],
+	["cargo add", 2],
+	["cargo bench", 2],
+	["cargo build", 2],
+	["cargo check", 2],
+	["cargo clean", 2],
+	["cargo clippy", 2],
+	["cargo doc", 2],
+	["cargo fix", 2],
+	["cargo fmt", 2],
+	["cargo generate", 2],
+	["cargo install", 2],
+	["cargo metadata", 2],
+	["cargo package", 2],
+	["cargo publish", 2],
+	["cargo remove", 2],
+	["cargo run", 2],
+	["cargo search", 2],
+	["cargo test", 2],
+	["cargo tree", 2],
+	["cargo uninstall", 2],
+	["cargo update", 2],
+	["cargo yank", 2],
+	["docker build", 2],
+	["docker compose", 3],
+	["docker container", 3],
+	["docker cp", 2],
+	["docker exec", 2],
+	["docker image", 3],
+	["docker images", 2],
+	["docker inspect", 2],
+	["docker kill", 2],
+	["docker logs", 2],
+	["docker network", 3],
+	["docker ps", 2],
+	["docker pull", 2],
+	["docker push", 2],
+	["docker rm", 2],
+	["docker rmi", 2],
+	["docker run", 2],
+	["docker start", 2],
+	["docker stop", 2],
+	["docker system", 3],
+	["docker tag", 2],
+	["docker volume", 3],
+	["kubectl apply", 2],
+	["kubectl create", 3],
+	["kubectl delete", 3],
+	["kubectl describe", 3],
+	["kubectl exec", 2],
+	["kubectl explain", 2],
+	["kubectl get", 3],
+	["kubectl label", 2],
+	["kubectl logs", 2],
+	["kubectl patch", 2],
+	["kubectl port-forward", 2],
+	["kubectl rollout", 3],
+	["kubectl scale", 2],
+	["kubectl set", 2],
+	["kubectl top", 3],
+	["go build", 2],
+	["go clean", 2],
+	["go env", 2],
+	["go fmt", 2],
+	["go generate", 2],
+	["go get", 2],
+	["go install", 2],
+	["go list", 2],
+	["go mod", 3],
+	["go run", 2],
+	["go test", 2],
+	["go vet", 2],
+	["go work", 3],
+	["pip install", 2],
+	["pip uninstall", 2],
+	["pip list", 2],
+	["pip show", 2],
+	["pip freeze", 2],
+	["pip3 install", 2],
+	["pip3 uninstall", 2],
+	["pip3 list", 2],
+	["pip3 show", 2],
+	["python -m", 3],
+	["python3 -m", 3],
+	["make", 1],
+	["cmake", 1],
+	["gh pr", 3],
+	["gh issue", 3],
+	["gh repo", 3],
+	["gh release", 3],
+	["gh workflow", 3],
+	["gh run", 3],
+	["gh secret", 3],
+	["rustup default", 2],
+	["rustup install", 2],
+	["rustup show", 2],
+	["rustup target", 3],
+	["rustup toolchain", 3],
+	["rustup update", 2],
+	["deno run", 2],
+	["deno test", 2],
+	["deno fmt", 2],
+	["deno lint", 2],
+	["bun add", 2],
+	["bun build", 2],
+	["bun install", 2],
+	["bun run", 3],
+	["bun test", 2],
+	["npx", 2],
+	["aws s3", 3],
+	["aws ec2", 3],
+	["aws iam", 3],
+	["aws lambda", 3],
+	["aws cloudformation", 3],
+	["aws ecs", 3],
+	["aws eks", 3],
+	["aws rds", 3],
+	["aws sts", 3],
+	["aws configure", 2],
+	["terraform init", 2],
+	["terraform plan", 2],
+	["terraform apply", 2],
+	["terraform destroy", 2],
+	["terraform validate", 2],
+	["terraform output", 2],
+	["terraform state", 3],
+	["terraform workspace", 3],
+	["helm install", 2],
+	["helm upgrade", 2],
+	["helm uninstall", 2],
+	["helm list", 2],
+	["helm repo", 3],
+	["helm status", 2],
+	["helm template", 2],
+];
+
+function collapseWhitespace(value: string): string {
+	return value.trim().split(/\s+/).filter(Boolean).join(" ");
+}
+
+export class BashArityDict {
+	private entries: Array<readonly [string, number]>;
+
+	constructor() {
+		this.entries = [...BASH_ARITY_TABLE].sort((a, b) => b[0].length - a[0].length);
+	}
+
+	classify(tokens: string[]): string {
+		if (tokens.length === 0) {
+			return "";
+		}
+		const positional = tokens
+			.filter((t) => !t.startsWith("-"))
+			.map((t) => t.toLowerCase());
+		if (positional.length === 0) {
+			return "";
+		}
+		const maxDepth = Math.min(positional.length, 3);
+		for (let depth = maxDepth; depth >= 1; depth--) {
+			const candidate = positional.slice(0, depth).join(" ");
+			const hit = this.entries.find(([key]) => key === candidate);
+			if (hit) {
+				const arity = hit[1];
+				const take = Math.min(arity, positional.length);
+				return positional.slice(0, take).join(" ");
+			}
+		}
+		return positional[0] ?? "";
+	}
+
+	allowRuleMatches(pattern: string, command: string): boolean {
+		const patternLower = pattern.trim().toLowerCase();
+		const commandTokens = command.trim().split(/\s+/).filter(Boolean);
+		const canonical = this.classify(commandTokens);
+		if (canonical === patternLower) {
+			return true;
+		}
+		const patternNorm = collapseWhitespace(patternLower);
+		const commandNorm = collapseWhitespace(command.trim().toLowerCase());
+		return (
+			commandNorm === patternNorm ||
+			commandNorm.startsWith(`${patternNorm} `)
+		);
+	}
+}

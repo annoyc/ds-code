@@ -1,0 +1,22 @@
+{
+	"name": "@deepseek/ds-core",
+	"version": "0.1.0",
+	"description": "DeepSeek-focused pricing, cost tracking, and routing helpers",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": ["dist"],
+	"scripts": {
+		"clean": "shx rm -rf dist",
+		"build": "tsgo -p tsconfig.build.json",
+		"dev": "tsgo -p tsconfig.build.json --watch --preserveWatchOutput",
+		"prepublishOnly": "npm run clean && npm run build"
+	},
+	"dependencies": {
+		"typebox": "^1.1.24"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	},
+	"license": "MIT"
+}

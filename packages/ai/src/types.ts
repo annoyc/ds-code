@@ -142,6 +142,8 @@ export interface SimpleStreamOptions extends StreamOptions {
 	reasoning?: ThinkingLevel;
 	/** Custom token budgets for thinking levels (token-based providers only) */
 	thinkingBudgets?: ThinkingBudgets;
+	strictToolMode?: boolean;
+	maxStreamRetries?: number;
 }
 
 // Generic StreamFunction with typed options.
@@ -207,6 +209,8 @@ export interface Usage {
 		cacheWrite: number;
 		total: number;
 	};
+	reasoningTokens?: number;
+	reasoningReplayTokens?: number;
 }
 
 export type StopReason = "stop" | "length" | "toolUse" | "error" | "aborted";

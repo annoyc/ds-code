@@ -19,7 +19,11 @@
 			"@mariozechner/pi-web-ui": ["./packages/web-ui/src/index.ts"],
 			"@mariozechner/pi-web-ui/*": ["./packages/web-ui/src/*"],
 			"@mariozechner/pi-agent-old": ["./packages/agent-old/src/index.ts"],
-			"@mariozechner/pi-agent-old/*": ["./packages/agent-old/src/*"]
+			"@mariozechner/pi-agent-old/*": ["./packages/agent-old/src/*"],
+			"@deepseek/ds-core": ["./packages/ds-core/src/index.ts"],
+			"@deepseek/ds-core/*": ["./packages/ds-core/src/*"],
+			"@deepseek/ds-agent": ["./packages/ds-agent/src/index.ts"],
+			"@deepseek/ds-agent/*": ["./packages/ds-agent/src/*"]
 		}
 	},
 	"include": ["packages/*/src/**/*", "packages/*/test/**/*", "packages/coding-agent/examples/**/*"],
