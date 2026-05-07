@@ -32,6 +32,7 @@ function formatTokens(count: number): string {
  */
 export class FooterComponent implements Component {
 	private autoCompactEnabled = true;
+	private lastRoutedModelId: string | undefined;
 
 	constructor(
 		private session: AgentSession,
@@ -44,6 +45,10 @@ export class FooterComponent implements Component {
 
 	setAutoCompactEnabled(enabled: boolean): void {
 		this.autoCompactEnabled = enabled;
+	}
+
+	setLastRoutedModel(modelId: string | undefined): void {
+		this.lastRoutedModelId = modelId;
 	}
 
 	/**
@@ -158,12 +163,25 @@ export class FooterComponent implements Component {
 		// Calculate available space for padding (minimum 2 spaces between stats and model)
 		const minPadding = 2;
 
+		// Append routing indicator when a different model was used for the last turn
+		let routingIndicator = "";
+		if (
+			this.lastRoutedModelId &&
+			state.model &&
+			this.lastRoutedModelId !== state.model.id
+		) {
+			const shortName = this.lastRoutedModelId.replace(/^.*-v\d+-/, "");
+			routingIndicator = ` (→${shortName})`;
+		}
+
 		// Add thinking level indicator if model supports reasoning
-		let rightSideWithoutProvider = modelName;
+		let rightSideWithoutProvider = `${modelName}${routingIndicator}`;
 		if (state.model?.reasoning) {
 			const thinkingLevel = state.thinkingLevel || "off";
 			rightSideWithoutProvider =
-				thinkingLevel === "off" ? `${modelName} • thinking off` : `${modelName} • ${thinkingLevel}`;
+				thinkingLevel === "off"
+					? `${modelName}${routingIndicator} • thinking off`
+					: `${modelName}${routingIndicator} • ${thinkingLevel}`;
 		}
 
 		// Prepend the provider in parentheses if there are multiple providers and there's enough room

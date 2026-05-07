@@ -6,6 +6,8 @@ import {
 	type AgentMode,
 	type DsConfig,
 } from "./config.js";
+import { CostRouter, type RouteContext } from "@deepseek/ds-core";
+import { classifyQuery } from "./model-classifier.js";
 
 interface CliArgs {
 	prompt?: string;
@@ -119,7 +121,8 @@ export async function main(argv: string[]): Promise<void> {
 
 	const piArgv = buildPiArgv(argv, args, config);
 
-	type PiMain = { main: (a: string[]) => void | Promise<void> };
+	type PiMainOptions = { modelRouter?: (ctx: any) => any; extensionFactories?: any[] };
+	type PiMain = { main: (a: string[], options?: PiMainOptions) => void | Promise<void> };
 	const piMod = await (import("@mariozechner/pi-coding-agent") as Promise<PiMain>).catch(() => null);
 	const piMain = piMod?.main;
 
@@ -127,8 +130,14 @@ export async function main(argv: string[]): Promise<void> {
 		console.error(`[ds] piArgv: ${JSON.stringify(piArgv)}`);
 	}
 
+	const piOptions: PiMainOptions = {};
+	const modelRouter = createModelRouter(config);
+	if (modelRouter) {
+		piOptions.modelRouter = modelRouter;
+	}
+
 	if (piMain) {
-		await piMain(piArgv);
+		await piMain(piArgv, piOptions);
 	} else {
 		console.log(`${APP_NAME} - DeepSeek Terminal Agent`);
 		console.log("Powered by DeepSeek V4 + pi-mono");
@@ -266,6 +275,67 @@ function buildPiArgv(originalArgv: string[], args: CliArgs, config: DsConfig): s
 	}
 
 	return piArgs;
+}
+
+interface ModelRouteContext {
+	currentModel: { id: string; provider: string };
+	messageCount: number;
+	lastToolCalls: string[];
+	estimatedInputTokens: number;
+	lastUserMessage?: string;
+}
+
+function createModelRouter(
+	config: DsConfig,
+): ((ctx: ModelRouteContext) => Promise<{ provider: string; modelId: string } | undefined>) | undefined {
+	if (!config.autoModel) return undefined;
+
+	const isDeepSeekModel = config.model.startsWith("deepseek") || !config.model.includes("/");
+	if (!isDeepSeekModel) return undefined;
+
+	const router = new CostRouter({
+		autoModel: config.autoModel,
+		autoReasoning: config.autoReasoning,
+		defaultModel: config.model,
+		flashModel: "deepseek-v4-flash",
+		proModel: "deepseek-v4-pro",
+	});
+
+	const apiKey = process.env.DEEPSEEK_API_KEY ?? config.apiKey;
+
+	return async (ctx: ModelRouteContext) => {
+		const routeCtx: RouteContext = {
+			messageCount: ctx.messageCount,
+			lastToolCalls: ctx.lastToolCalls,
+			estimatedInputTokens: ctx.estimatedInputTokens,
+			userMode: (process.env.DS_MODE as RouteContext["userMode"]) ?? undefined,
+		};
+
+		const heuristic = router.resolveModelHeuristic(routeCtx);
+
+		let finalModelId = heuristic.model;
+
+		if (heuristic.needsClassification && ctx.lastUserMessage && apiKey) {
+			const classification = await classifyQuery(ctx.lastUserMessage, { apiKey });
+
+			if (classification) {
+				// Pro classified successfully — trust its judgment
+				finalModelId = router.resolveModelWithClassification(routeCtx, classification);
+			}
+			// If classification is undefined (call failed), keep the heuristic's
+			// recommendation (flash) rather than falling back to pro
+
+			if (process.env.DS_DEBUG) {
+				console.error(
+					`[ds-router] classification=${classification ?? "FAILED"} heuristic=${heuristic.model} final=${finalModelId}`,
+				);
+			}
+		} else if (process.env.DS_DEBUG) {
+			console.error(`[ds-router] heuristic=${heuristic.model} (no classification needed)`);
+		}
+
+		return { provider: "deepseek", modelId: finalModelId };
+	};
 }
 
 function printHelp(): void {

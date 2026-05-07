@@ -418,6 +418,7 @@ async function promptForMissingSessionCwd(
 
 export interface MainOptions {
 	extensionFactories?: ExtensionFactory[];
+	modelRouter?: import("./core/sdk.js").ModelRouterFn;
 }
 
 export async function main(args: string[], options?: MainOptions) {
@@ -592,6 +593,7 @@ export async function main(args: string[], options?: MainOptions) {
 			tools: sessionOptions.tools,
 			noTools: sessionOptions.noTools,
 			customTools: sessionOptions.customTools,
+			modelRouter: options?.modelRouter,
 		});
 		const cliThinkingOverride = parsed.thinking !== undefined || cliThinkingFromModel;
 		if (created.session.model && cliThinkingOverride) {

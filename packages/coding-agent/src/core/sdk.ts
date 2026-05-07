@@ -30,6 +30,40 @@ import {
 	withFileMutationQueue,
 } from "./tools/index.js";
 
+/**
+ * Context provided to a model router for per-turn routing decisions.
+ */
+export interface ModelRouteContext {
+	/** The model that would be used without routing */
+	currentModel: Model<any>;
+	/** Number of messages in the current conversation */
+	messageCount: number;
+	/** Tool names from recent assistant tool calls */
+	lastToolCalls: string[];
+	/** Estimated input token count for this request */
+	estimatedInputTokens: number;
+	/** Text of the most recent user message (if available) */
+	lastUserMessage?: string;
+}
+
+/**
+ * Result from a model router indicating which model to use.
+ * Return `undefined` to use the default model.
+ */
+export interface ModelRouteResult {
+	provider: string;
+	modelId: string;
+	thinkingLevel?: ThinkingLevel;
+}
+
+/**
+ * Callback that decides which model to use for each LLM request.
+ * Called before every provider request inside the agent loop.
+ */
+export type ModelRouterFn = (
+	context: ModelRouteContext,
+) => Promise<ModelRouteResult | undefined> | ModelRouteResult | undefined;
+
 export interface CreateAgentSessionOptions {
 	/** Working directory for project-local discovery. Default: process.cwd() */
 	cwd?: string;
@@ -77,6 +111,13 @@ export interface CreateAgentSessionOptions {
 	settingsManager?: SettingsManager;
 	/** Session start event metadata for extension runtime startup. */
 	sessionStartEvent?: SessionStartEvent;
+
+	/**
+	 * Optional model router for per-turn model selection.
+	 * When provided, the router is consulted before each LLM request to decide
+	 * whether to use a different model (e.g. flash for simple queries, pro for complex ones).
+	 */
+	modelRouter?: ModelRouterFn;
 }
 
 /** Result from createAgentSession */
@@ -153,6 +194,117 @@ function getAttributionHeaders(
 	}
 
 	return undefined;
+}
+
+function buildModelRouteContext(
+	currentModel: Model<any>,
+	context: { messages: Message[] },
+): ModelRouteContext {
+	const messages = context.messages;
+	const messageCount = messages.length;
+
+	const toolCalls: string[] = [];
+	let lastUserMessage: string | undefined;
+	for (let i = messages.length - 1; i >= 0; i--) {
+		const msg = messages[i];
+		if (msg.role === "assistant" && Array.isArray(msg.content)) {
+			for (const part of msg.content) {
+				if (part.type === "toolCall") {
+					toolCalls.push(part.name);
+				}
+			}
+		}
+		if (!lastUserMessage && msg.role === "user") {
+			if (typeof msg.content === "string") {
+				lastUserMessage = msg.content;
+			} else if (Array.isArray(msg.content)) {
+				const textPart = msg.content.find((c: any) => c.type === "text");
+				if (textPart && "text" in textPart) {
+					lastUserMessage = (textPart as { type: "text"; text: string }).text;
+				}
+			}
+		}
+	}
+
+	let estimatedInputTokens = 0;
+	for (const msg of messages) {
+		if (typeof msg.content === "string") {
+			estimatedInputTokens += Math.ceil(msg.content.length / 4);
+		} else if (Array.isArray(msg.content)) {
+			for (const part of msg.content) {
+				if ("text" in part && typeof part.text === "string") {
+					estimatedInputTokens += Math.ceil(part.text.length / 4);
+				}
+			}
+		}
+	}
+
+	return {
+		currentModel,
+		messageCount,
+		lastToolCalls: toolCalls,
+		estimatedInputTokens,
+		lastUserMessage,
+	};
+}
+
+const MODEL_ROUTER_DEBUG = !!process.env.DS_DEBUG;
+
+function routerLog(...args: unknown[]): void {
+	if (MODEL_ROUTER_DEBUG) {
+		console.error("[model-router]", ...args);
+	}
+}
+
+async function resolveRoutedModel(
+	router: ModelRouterFn,
+	currentModel: Model<any>,
+	context: { messages: Message[] },
+	modelRegistry: ModelRegistry,
+): Promise<Model<any> | undefined> {
+	try {
+		const routeContext = buildModelRouteContext(currentModel, context);
+		routerLog(
+			`context: msgs=${routeContext.messageCount} tools=[${routeContext.lastToolCalls.join(",")}] tokens≈${routeContext.estimatedInputTokens}`,
+		);
+
+		const result = await router(routeContext);
+		if (!result) {
+			routerLog("router returned undefined, using default model");
+			return undefined;
+		}
+
+		routerLog(`router chose: ${result.provider}/${result.modelId}`);
+
+		if (result.provider === currentModel.provider && result.modelId === currentModel.id) {
+			routerLog("routed model same as current, no change");
+			return undefined;
+		}
+
+		const resolved = modelRegistry.find(result.provider, result.modelId);
+		if (!resolved) {
+			routerLog(`model ${result.provider}/${result.modelId} not found in registry`);
+			routerLog(
+				`available deepseek models: ${modelRegistry
+					.getAvailable()
+					.filter((m) => m.provider === result.provider)
+					.map((m) => m.id)
+					.join(", ")}`,
+			);
+			return undefined;
+		}
+
+		if (!modelRegistry.hasConfiguredAuth(resolved)) {
+			routerLog(`model ${result.provider}/${result.modelId} found but auth not configured`);
+			return undefined;
+		}
+
+		routerLog(`routing: ${currentModel.provider}/${currentModel.id} → ${resolved.provider}/${resolved.id}`);
+		return resolved;
+	} catch (err) {
+		routerLog("router error:", err);
+		return undefined;
+	}
 }
 
 /**
@@ -316,6 +468,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	};
 
 	const extensionRunnerRef: { current?: ExtensionRunner } = {};
+	const modelRouterFn = options.modelRouter;
 
 	agent = new Agent({
 		initialState: {
@@ -326,13 +479,27 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		},
 		convertToLlm: convertToLlmWithBlockImages,
 		streamFn: async (model, context, options) => {
-			const auth = await modelRegistry.getApiKeyAndHeaders(model);
+			let effectiveModel = model;
+
+			if (modelRouterFn) {
+				const routeResult = await resolveRoutedModel(
+					modelRouterFn,
+					model,
+					context,
+					modelRegistry,
+				);
+				if (routeResult) {
+					effectiveModel = routeResult;
+				}
+			}
+
+			const auth = await modelRegistry.getApiKeyAndHeaders(effectiveModel);
 			if (!auth.ok) {
 				throw new Error(auth.error);
 			}
 			const providerRetrySettings = settingsManager.getProviderRetrySettings();
-			const attributionHeaders = getAttributionHeaders(model, settingsManager);
-			return streamSimple(model, context, {
+			const attributionHeaders = getAttributionHeaders(effectiveModel, settingsManager);
+			return streamSimple(effectiveModel, context, {
 				...options,
 				apiKey: auth.apiKey,
 				timeoutMs: options?.timeoutMs ?? providerRetrySettings.timeoutMs,

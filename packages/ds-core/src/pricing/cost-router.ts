@@ -15,6 +15,18 @@ export interface RouteContext {
 	userMode?: "plan" | "agent" | "yolo";
 }
 
+export type QueryComplexity = "simple" | "complex";
+
+/**
+ * Result of heuristic model resolution, including whether the decision
+ * could benefit from a Pro model classification call.
+ */
+export interface HeuristicRouteResult {
+	model: string;
+	/** True when heuristics picked flash but confidence is low enough to warrant a Pro classification check */
+	needsClassification: boolean;
+}
+
 const READ_ONLY_TOOL =
 	/^(read_file|grep|glob_file_search|\bglob\b|list_dir|codebase_search|file_search|semantic_search|find_references|view_|documentation_|ls\b|pwd\b)/i;
 
@@ -36,25 +48,57 @@ function isComplexTool(name: string): boolean {
 export class CostRouter {
 	constructor(private readonly config: CostRouterConfig) {}
 
-	resolveModel(context: RouteContext): string {
+	/**
+	 * Pure heuristic model resolution. Returns both the chosen model and
+	 * whether a Pro classification call is advisable.
+	 */
+	resolveModelHeuristic(context: RouteContext): HeuristicRouteResult {
 		if (!this.config.autoModel) {
-			return this.config.defaultModel;
+			return { model: this.config.defaultModel, needsClassification: false };
 		}
 		const { messageCount, lastToolCalls, estimatedInputTokens } = context;
 
 		if (estimatedInputTokens !== undefined && estimatedInputTokens >= 48_000) {
-			return this.config.proModel;
+			return { model: this.config.proModel, needsClassification: false };
 		}
 		if (messageCount >= 5) {
-			return this.config.proModel;
+			return { model: this.config.proModel, needsClassification: false };
 		}
 		if (lastToolCalls?.some(isComplexTool)) {
-			return this.config.proModel;
+			return { model: this.config.proModel, needsClassification: false };
 		}
 		if (!lastToolCalls?.length || lastToolCalls.every(isReadOnlyTool)) {
-			return this.config.flashModel;
+			// Flash is the heuristic pick. For early turns (1-2 messages) without
+			// tool context, we don't have much signal — a Pro classification call
+			// can provide a smarter decision.
+			const needsClassification = messageCount <= 2;
+			return { model: this.config.flashModel, needsClassification };
 		}
-		return this.config.proModel;
+		return { model: this.config.proModel, needsClassification: false };
+	}
+
+	/**
+	 * Resolve model using heuristics only (backward-compatible shorthand).
+	 */
+	resolveModel(context: RouteContext): string {
+		return this.resolveModelHeuristic(context).model;
+	}
+
+	/**
+	 * Resolve model using heuristic + optional Pro classification override.
+	 * Pass the classification result when available; otherwise falls back to heuristic.
+	 */
+	resolveModelWithClassification(
+		context: RouteContext,
+		classification: QueryComplexity | undefined,
+	): string {
+		const heuristic = this.resolveModelHeuristic(context);
+		if (!classification) return heuristic.model;
+
+		if (heuristic.needsClassification) {
+			return classification === "simple" ? this.config.flashModel : this.config.proModel;
+		}
+		return heuristic.model;
 	}
 
 	resolveReasoningEffort(context: RouteContext): ReasoningEffort {

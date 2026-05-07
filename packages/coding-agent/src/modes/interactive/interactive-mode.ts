@@ -307,6 +307,10 @@ export class InteractiveMode {
 	// Shutdown state
 	private shutdownRequested = false;
 
+	// Model routing tracking for the current agent turn
+	private turnRoutedModel: string | undefined;
+	private turnRoutedCost = 0;
+
 	// Extension UI state
 	private extensionSelector: ExtensionSelectorComponent | undefined = undefined;
 	private extensionInput: ExtensionInputComponent | undefined = undefined;
@@ -2634,6 +2638,9 @@ export class InteractiveMode {
 		switch (event.type) {
 			case "agent_start":
 				this.pendingTools.clear();
+				this.turnRoutedModel = undefined;
+				this.turnRoutedCost = 0;
+				this.footer.setLastRoutedModel(undefined);
 				if (this.settingsManager.getShowTerminalProgress()) {
 					this.ui.terminal.setProgress(true);
 				}
@@ -2764,6 +2771,15 @@ export class InteractiveMode {
 							component.setArgsComplete();
 						}
 					}
+
+					// Track routing info for end-of-turn summary
+					const defaultModelId = this.session.state.model?.id;
+					if (this.streamingMessage.model && defaultModelId && this.streamingMessage.model !== defaultModelId) {
+						this.turnRoutedModel = this.streamingMessage.model;
+						this.turnRoutedCost += this.streamingMessage.usage.cost.total;
+						this.footer.setLastRoutedModel(this.streamingMessage.model);
+					}
+
 					this.streamingComponent = undefined;
 					this.streamingMessage = undefined;
 					this.footer.invalidate();
@@ -2829,6 +2845,11 @@ export class InteractiveMode {
 					this.streamingMessage = undefined;
 				}
 				this.pendingTools.clear();
+
+				// Show routing summary at the end of the turn
+				if (this.turnRoutedModel) {
+					this.insertRoutingSummary(this.turnRoutedModel, this.turnRoutedCost);
+				}
 
 				await this.checkShutdownRequested();
 
@@ -3091,6 +3112,39 @@ export class InteractiveMode {
 	}
 
 	/**
+	 * Append a routing summary line at the end of the current agent turn.
+	 * Shows the routed model and accumulated cost for the turn.
+	 */
+	private insertRoutingSummary(routedModel: string, totalCost: number): void {
+		const isCny = process.env.DS_COST_CURRENCY === "cny";
+		const currencySymbol = isCny ? "¥" : "$";
+		const displayCost = isCny ? totalCost * 7.3 : totalCost;
+		const precision = displayCost < 0.001 ? 4 : 3;
+		const costStr = totalCost > 0 ? ` ${theme.fg("dim", "•")} ${theme.fg("dim", `${currencySymbol}${displayCost.toFixed(precision)}`)}` : "";
+
+		const label = `${theme.fg("muted", "│")} ${theme.fg("dim", "via")} ${theme.fg("accent", routedModel)}${costStr}`;
+		this.chatContainer.addChild(new Text(label, 0, 0));
+	}
+
+	/**
+	 * Insert a routing tag for a historical assistant message (session replay).
+	 */
+	private insertHistoryRoutingTag(message: AssistantMessage): void {
+		const defaultModelId = this.session.state.model?.id;
+		if (!message.model || !defaultModelId || message.model === defaultModelId) return;
+
+		const isCny = process.env.DS_COST_CURRENCY === "cny";
+		const currencySymbol = isCny ? "¥" : "$";
+		const rawCost = message.usage.cost.total;
+		const displayCost = isCny ? rawCost * 7.3 : rawCost;
+		const precision = displayCost < 0.001 ? 4 : 3;
+		const costStr = rawCost > 0 ? ` ${theme.fg("dim", "•")} ${theme.fg("dim", `${currencySymbol}${displayCost.toFixed(precision)}`)}` : "";
+
+		const label = `${theme.fg("muted", "│")} ${theme.fg("dim", "via")} ${theme.fg("accent", message.model)}${costStr}`;
+		this.chatContainer.addChild(new Text(label, 0, 0));
+	}
+
+	/**
 	 * Render session context to chat. Used for initial load and rebuild after compaction.
 	 * @param sessionContext Session context to render
 	 * @param options.updateFooter Update footer state
@@ -3112,6 +3166,7 @@ export class InteractiveMode {
 			// Assistant messages need special handling for tool calls
 			if (message.role === "assistant") {
 				this.addMessageToChat(message);
+				this.insertHistoryRoutingTag(message);
 				// Render tool call components
 				for (const content of message.content) {
 					if (content.type === "toolCall") {
