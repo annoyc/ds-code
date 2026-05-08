@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-	pricingForModel,
 	calculateTurnCost,
 	formatCostAmount,
 	formatCostEstimate,
 	getCurrencySymbol,
+	pricingForModel,
 } from "../src/pricing/index.js";
 
 describe("pricingForModel", () => {

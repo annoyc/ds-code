@@ -15,12 +15,7 @@ const LAYER_ORDER: Record<RulesetLayer, number> = {
 };
 
 function normalizeCommand(value: string): string {
-	return value
-		.trim()
-		.toLowerCase()
-		.split(/\s+/)
-		.filter(Boolean)
-		.join(" ");
+	return value.trim().toLowerCase().split(/\s+/).filter(Boolean).join(" ");
 }
 
 function firstToken(command: string): string {
@@ -73,9 +68,7 @@ export class ExecPolicyEngine {
 			}
 		}
 
-		const trustedRule = trusted.find((rule) =>
-			this.arityDict.allowRuleMatches(rule, context.command),
-		);
+		const trustedRule = trusted.find((rule) => this.arityDict.allowRuleMatches(rule, context.command));
 		const isTrusted = trustedRule !== undefined;
 		const sessionOk = this.isSessionApproved(normalized);
 
@@ -87,8 +80,7 @@ export class ExecPolicyEngine {
 			networkAmendment: { host: context.cwd, action: "allow" },
 		});
 
-		const sandboxNote =
-			context.sandboxMode === true ? " (sandbox mode)" : "";
+		const sandboxNote = context.sandboxMode === true ? " (sandbox mode)" : "";
 
 		if (context.askForApproval === "never") {
 			return {
@@ -113,9 +105,7 @@ export class ExecPolicyEngine {
 			return {
 				type: "skip",
 				matchedRule: trustedRule,
-				reason: sessionOk
-					? "Matched session-approved prefix."
-					: "Matched trusted prefix rule.",
+				reason: sessionOk ? "Matched session-approved prefix." : "Matched trusted prefix rule.",
 			};
 		}
 
@@ -169,13 +159,7 @@ export class ExecPolicyEngine {
 				"fd",
 				"find",
 			],
-			deniedPrefixes: [
-				"rm -rf /",
-				"sudo rm",
-				"mkfs",
-				"dd if=",
-				":(){ :|:& };:",
-			],
+			deniedPrefixes: ["rm -rf /", "sudo rm", "mkfs", "dd if=", ":(){ :|:& };:"],
 		};
 	}
 }

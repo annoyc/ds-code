@@ -1,11 +1,4 @@
-export type SubAgentType =
-	| "general"
-	| "explore"
-	| "plan"
-	| "review"
-	| "implementer"
-	| "verifier"
-	| "custom";
+export type SubAgentType = "general" | "explore" | "plan" | "review" | "implementer" | "verifier" | "custom";
 
 export type SubAgentStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 

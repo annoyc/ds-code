@@ -1,15 +1,10 @@
+import { CostRouter, type RouteContext } from "@deepseek/ds-core";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
-import {
-	APP_NAME,
-	loadConfig,
-	type AgentMode,
-	type DsConfig,
-} from "./config.js";
-import { CostRouter, type RouteContext } from "@deepseek/ds-core";
+import { type AgentMode, APP_NAME, type DsConfig, loadConfig } from "./config.js";
+import { createDsExtensionFactory } from "./ds-extension.js";
 import { classifyQuery } from "./model-classifier.js";
 import { PLAN_MODE_TOOLS } from "./modes/index.js";
-import { createDsExtensionFactory } from "./ds-extension.js";
 
 interface CliArgs {
 	prompt?: string;
@@ -170,8 +165,7 @@ function ensureDeepSeekApiKey(config: DsConfig): void {
 		return;
 	}
 
-	const isDeepSeekModel =
-		config.model.startsWith("deepseek") || !config.model.includes("/");
+	const isDeepSeekModel = config.model.startsWith("deepseek") || !config.model.includes("/");
 
 	if (!isDeepSeekModel) {
 		return;
@@ -192,9 +186,9 @@ function ensureDeepSeekApiKey(config: DsConfig): void {
 const MODEL_IDENTITY: Record<string, { name: string; maker: string }> = {
 	deepseek: { name: "DeepSeek", maker: "DeepSeek (深度求索)" },
 	gpt: { name: "GPT", maker: "OpenAI" },
-	"o1": { name: "o1", maker: "OpenAI" },
-	"o3": { name: "o3", maker: "OpenAI" },
-	"o4": { name: "o4", maker: "OpenAI" },
+	o1: { name: "o1", maker: "OpenAI" },
+	o3: { name: "o3", maker: "OpenAI" },
+	o4: { name: "o4", maker: "OpenAI" },
 	claude: { name: "Claude", maker: "Anthropic" },
 	gemini: { name: "Gemini", maker: "Google" },
 	qwen: { name: "Qwen", maker: "Alibaba Cloud (阿里云)" },
@@ -293,10 +287,20 @@ interface ModelRouteContext {
 	lastUserMessage?: string;
 }
 
+const REASONING_TO_THINKING: Record<string, string> = {
+	off: "off",
+	low: "low",
+	medium: "medium",
+	high: "high",
+	max: "xhigh",
+};
+
 function createModelRouter(
 	config: DsConfig,
-): ((ctx: ModelRouteContext) => Promise<{ provider: string; modelId: string } | undefined>) | undefined {
-	if (!config.autoModel) return undefined;
+):
+	| ((ctx: ModelRouteContext) => Promise<{ provider: string; modelId: string; thinkingLevel?: string } | undefined>)
+	| undefined {
+	if (!config.autoModel && !config.autoReasoning) return undefined;
 
 	const isDeepSeekModel = config.model.startsWith("deepseek") || !config.model.includes("/");
 	if (!isDeepSeekModel) return undefined;
@@ -327,11 +331,8 @@ function createModelRouter(
 			const classification = await classifyQuery(ctx.lastUserMessage, { apiKey });
 
 			if (classification) {
-				// Pro classified successfully — trust its judgment
 				finalModelId = router.resolveModelWithClassification(routeCtx, classification);
 			}
-			// If classification is undefined (call failed), keep the heuristic's
-			// recommendation (flash) rather than falling back to pro
 
 			if (process.env.DS_DEBUG) {
 				console.error(
@@ -342,12 +343,22 @@ function createModelRouter(
 			console.error(`[ds-router] heuristic=${heuristic.model} (no classification needed)`);
 		}
 
-		return { provider: "deepseek", modelId: finalModelId };
+		const effort = router.resolveReasoningEffort(routeCtx);
+		const thinkingLevel = REASONING_TO_THINKING[effort];
+
+		if (process.env.DS_DEBUG) {
+			console.error(
+				`[ds-router] reasoning: autoReasoning=${config.autoReasoning} effort=${effort} thinking=${thinkingLevel}`,
+			);
+		}
+
+		return { provider: "deepseek", modelId: finalModelId, thinkingLevel };
 	};
 }
 
 function printHelp(): void {
-	console.log(`
+	console.log(
+		`
 Usage: ${APP_NAME} [options] [prompt]
 
 DeepSeek Terminal Agent - AI coding assistant powered by DeepSeek V4
@@ -378,5 +389,6 @@ Examples:
   ${APP_NAME} run "fix the bug in main.ts" Run single prompt
   ${APP_NAME} "fix the bug in main.ts" Run single prompt
   ${APP_NAME} --mode yolo "add tests"  Auto-approve all operations
-`.trim());
+`.trim(),
+	);
 }

@@ -3,15 +3,7 @@ import type { SubAgentManager } from "./manager.js";
 import type { SubAgentResult, SubAgentType } from "./types.js";
 import { SUBAGENT_TYPE_ALIASES } from "./types.js";
 
-const CANONICAL_TYPES = new Set<string>([
-	"general",
-	"explore",
-	"plan",
-	"review",
-	"implementer",
-	"verifier",
-	"custom",
-]);
+const CANONICAL_TYPES = new Set<string>(["general", "explore", "plan", "review", "implementer", "verifier", "custom"]);
 
 function coerceAgentType(raw: string): string {
 	const key = raw.trim().toLowerCase();
@@ -60,11 +52,7 @@ export function createSubAgentTools(manager: SubAgentManager) {
 				agent_id: Type.String({ description: "ID of the agent to wait for" }),
 				timeout: Type.Optional(Type.Number({ description: "Timeout in seconds" })),
 			}),
-			execute: async (
-				_id: string,
-				params: { agent_id: string; timeout?: number },
-				signal: AbortSignal,
-			) => {
+			execute: async (_id: string, params: { agent_id: string; timeout?: number }, signal: AbortSignal) => {
 				if (signal.aborted) {
 					throw new Error("Aborted");
 				}
@@ -86,11 +74,7 @@ export function createSubAgentTools(manager: SubAgentManager) {
 				agent_id: Type.String({ description: "ID of the agent" }),
 				message: Type.String({ description: "Message to send" }),
 			}),
-			execute: async (
-				_id: string,
-				params: { agent_id: string; message: string },
-				signal: AbortSignal,
-			) => {
+			execute: async (_id: string, params: { agent_id: string; message: string }, signal: AbortSignal) => {
 				if (signal.aborted) {
 					throw new Error("Aborted");
 				}

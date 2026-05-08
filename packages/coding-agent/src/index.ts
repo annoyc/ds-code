@@ -168,9 +168,6 @@ export {
 	type CreateAgentSessionFromServicesOptions,
 	type CreateAgentSessionOptions,
 	type CreateAgentSessionResult,
-	type ModelRouteContext,
-	type ModelRouteResult,
-	type ModelRouterFn,
 	type CreateAgentSessionRuntimeFactory,
 	type CreateAgentSessionRuntimeResult,
 	type CreateAgentSessionServicesOptions,
@@ -189,6 +186,9 @@ export {
 	createReadOnlyTools,
 	createReadTool,
 	createWriteTool,
+	type ModelRouteContext,
+	type ModelRouteResult,
+	type ModelRouterFn,
 	type PromptTemplate,
 } from "./core/sdk.js";
 export {

@@ -1,6 +1,6 @@
-export { SideGitSnapshots } from "./side-git.js";
 export {
+	type CacheAwareCompactionOptions,
 	createOverflowRecovery,
 	enhanceCompaction,
-	type CacheAwareCompactionOptions,
 } from "./compaction-enhancer.js";
+export { SideGitSnapshots } from "./side-git.js";

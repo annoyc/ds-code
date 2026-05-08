@@ -3120,7 +3120,10 @@ export class InteractiveMode {
 		const currencySymbol = isCny ? "¥" : "$";
 		const displayCost = isCny ? totalCost * 7.3 : totalCost;
 		const precision = displayCost < 0.001 ? 4 : 3;
-		const costStr = totalCost > 0 ? ` ${theme.fg("dim", "•")} ${theme.fg("dim", `${currencySymbol}${displayCost.toFixed(precision)}`)}` : "";
+		const costStr =
+			totalCost > 0
+				? ` ${theme.fg("dim", "•")} ${theme.fg("dim", `${currencySymbol}${displayCost.toFixed(precision)}`)}`
+				: "";
 
 		const label = `${theme.fg("muted", "│")} ${theme.fg("dim", "via")} ${theme.fg("accent", routedModel)}${costStr}`;
 		this.chatContainer.addChild(new Text(label, 0, 0));
@@ -3138,7 +3141,10 @@ export class InteractiveMode {
 		const rawCost = message.usage.cost.total;
 		const displayCost = isCny ? rawCost * 7.3 : rawCost;
 		const precision = displayCost < 0.001 ? 4 : 3;
-		const costStr = rawCost > 0 ? ` ${theme.fg("dim", "•")} ${theme.fg("dim", `${currencySymbol}${displayCost.toFixed(precision)}`)}` : "";
+		const costStr =
+			rawCost > 0
+				? ` ${theme.fg("dim", "•")} ${theme.fg("dim", `${currencySymbol}${displayCost.toFixed(precision)}`)}`
+				: "";
 
 		const label = `${theme.fg("muted", "│")} ${theme.fg("dim", "via")} ${theme.fg("accent", message.model)}${costStr}`;
 		this.chatContainer.addChild(new Text(label, 0, 0));

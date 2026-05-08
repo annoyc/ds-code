@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { SubAgentManager, type SubAgentExecuteFn } from "../src/subagent/manager.js";
-import type { SubAgentManagerConfig, SubAgentResult } from "../src/subagent/types.js";
 import { randomUUID } from "node:crypto";
+import { beforeEach, describe, expect, it } from "vitest";
+import { type SubAgentExecuteFn, SubAgentManager } from "../src/subagent/manager.js";
+import type { SubAgentManagerConfig } from "../src/subagent/types.js";
 
 function makeConfig(overrides?: Partial<SubAgentManagerConfig>): SubAgentManagerConfig {
 	return {
@@ -49,7 +49,7 @@ describe("SubAgentManager", () => {
 	});
 
 	it("cancels an agent", async () => {
-		const slowExecute: SubAgentExecuteFn = async (ctx) => {
+		const slowExecute: SubAgentExecuteFn = async (_ctx) => {
 			await new Promise((r) => setTimeout(r, 10_000));
 			return { summary: "done", rawOutput: "" };
 		};
@@ -88,9 +88,7 @@ describe("SubAgentManager", () => {
 		const limitedManager = new SubAgentManager(config, blockingExecute);
 
 		await limitedManager.spawn({ type: "general", prompt: "task 1" });
-		await expect(
-			limitedManager.spawn({ type: "general", prompt: "task 2" }),
-		).rejects.toThrow("concurrency cap");
+		await expect(limitedManager.spawn({ type: "general", prompt: "task 2" })).rejects.toThrow("concurrency cap");
 
 		await limitedManager.shutdown();
 	});

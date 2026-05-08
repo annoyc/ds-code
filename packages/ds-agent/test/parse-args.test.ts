@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 // We test parseArgs by importing main.ts internals.
 // Since parseArgs and buildPiArgv are not exported, we test the public
 // main() behavior indirectly, and test config loading directly.
 
-import { loadConfig, type DsConfig, DEFAULT_CONFIG } from "../src/config.js";
+import { DEFAULT_CONFIG, loadConfig } from "../src/config.js";
 
 describe("loadConfig", () => {
 	it("returns default config when no file exists", () => {

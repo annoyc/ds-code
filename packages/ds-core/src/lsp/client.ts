@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from "child_process";
+import { type ChildProcess, spawn } from "child_process";
 import { readFile } from "fs/promises";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
@@ -32,7 +32,7 @@ function globToRegex(pattern: string): RegExp {
 		}
 		const c = g[i]!;
 		if ("\\.^$+()[]{}|".includes(c)) {
-			s += "\\" + c;
+			s += `\\${c}`;
 		} else if (c === "*") {
 			s += "[^/]*";
 		} else if (c === "?") {
@@ -42,7 +42,7 @@ function globToRegex(pattern: string): RegExp {
 		}
 		i++;
 	}
-	return new RegExp("^" + s + "$");
+	return new RegExp(`^${s}$`);
 }
 
 function fileMatchesPattern(absPath: string, cwd: string, pattern: string): boolean {
@@ -88,10 +88,7 @@ function languageIdForPath(absPath: string): string {
 	}
 }
 
-function lspDiagnosticToDiagnostic(
-	fileAbs: string,
-	raw: Record<string, unknown>,
-): Diagnostic | null {
+function lspDiagnosticToDiagnostic(fileAbs: string, raw: Record<string, unknown>): Diagnostic | null {
 	const range = raw.range as Record<string, Record<string, number>> | undefined;
 	const message = raw.message;
 	if (!range?.start || typeof message !== "string") {
@@ -100,8 +97,7 @@ function lspDiagnosticToDiagnostic(
 	const start = range.start;
 	const end = range.end ?? start;
 	const severityNum = typeof raw.severity === "number" ? raw.severity : undefined;
-	const severity =
-		severityNum !== undefined ? (DIAGNOSTIC_SEVERITY[severityNum] ?? "info") : "info";
+	const severity = severityNum !== undefined ? (DIAGNOSTIC_SEVERITY[severityNum] ?? "info") : "info";
 	const diag: Diagnostic = {
 		file: fileAbs,
 		line: (start.line ?? 0) + 1,
@@ -134,11 +130,7 @@ class LspServerProcess {
 	private readonly openedUris = new Set<string>();
 	private readonly documentVersions = new Map<string, number>();
 
-	constructor(
-		config: LspServerConfig,
-		cwd: string,
-		onDiagnostics: (uri: string, diags: Diagnostic[]) => void,
-	) {
+	constructor(config: LspServerConfig, cwd: string, onDiagnostics: (uri: string, diags: Diagnostic[]) => void) {
 		this.config = config;
 		this.cwd = cwd;
 		this.diagnosticCallback = onDiagnostics;
@@ -398,10 +390,7 @@ export class LspClient {
 	private diagnosticsByUri = new Map<string, Map<string, Diagnostic[]>>();
 	private cwd: string;
 	private configs: LspServerConfig[];
-	private waiters = new Map<
-		string,
-		Array<{ resolve: (d: Diagnostic[]) => void; timer: NodeJS.Timeout }>
-	>();
+	private waiters = new Map<string, Array<{ resolve: (d: Diagnostic[]) => void; timer: NodeJS.Timeout }>>();
 
 	constructor(cwd: string, configs?: LspServerConfig[]) {
 		this.cwd = path.resolve(cwd);
@@ -448,10 +437,7 @@ export class LspClient {
 		return out;
 	}
 
-	async waitForDiagnostics(
-		filePath: string,
-		options?: { timeout?: number },
-	): Promise<Diagnostic[]> {
+	async waitForDiagnostics(filePath: string, options?: { timeout?: number }): Promise<Diagnostic[]> {
 		const timeoutMs = options?.timeout ?? 5000;
 		const abs = path.resolve(this.cwd, filePath);
 		const uri = toFileUri(abs);
@@ -460,11 +446,14 @@ export class LspClient {
 				this.removeWaiter(uri, entry);
 				resolve(this.getDiagnostics(filePath));
 			}, timeoutMs);
-			const entry = { resolve: (d: Diagnostic[]) => {
-				clearTimeout(timer);
-				this.removeWaiter(uri, entry);
-				resolve(d);
-			}, timer };
+			const entry = {
+				resolve: (d: Diagnostic[]) => {
+					clearTimeout(timer);
+					this.removeWaiter(uri, entry);
+					resolve(d);
+				},
+				timer,
+			};
 			let list = this.waiters.get(uri);
 			if (!list) {
 				list = [];
@@ -474,10 +463,7 @@ export class LspClient {
 		});
 	}
 
-	private removeWaiter(
-		uri: string,
-		entry: { resolve: (d: Diagnostic[]) => void; timer: NodeJS.Timeout },
-	): void {
+	private removeWaiter(uri: string, entry: { resolve: (d: Diagnostic[]) => void; timer: NodeJS.Timeout }): void {
 		const list = this.waiters.get(uri);
 		if (!list) {
 			return;
@@ -517,8 +503,7 @@ export class LspClient {
 		const lines = [`[LSP Diagnostics for ${rel}]`];
 		for (const d of diagnostics) {
 			const sev = d.severity.toUpperCase();
-			const code =
-				d.code !== undefined ? ` (${String(d.code).replace(/\s+/g, "")})` : "";
+			const code = d.code !== undefined ? ` (${String(d.code).replace(/\s+/g, "")})` : "";
 			lines.push(`${sev} line ${d.line}: ${d.message}${code}`);
 		}
 		return lines.join("\n");

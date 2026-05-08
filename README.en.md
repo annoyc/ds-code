@@ -57,55 +57,67 @@ npx dsc --mode yolo "add unit tests"  # Full auto mode (skip approvals)
 
 ### Cost-Aware System
 
-| Feature | Description |
-|---------|-------------|
-| **Real-time Pricing Engine** | Built-in DeepSeek V4 Pro/Flash rates with cache hit/miss differential pricing and automatic promotional discount tracking |
-| **Cost Tracker** | Per-turn token usage and cost statistics, displayed in CNY by default |
-| **Smart Routing** | Automatically selects Flash or Pro model based on task complexity, dynamically adjusts reasoning depth based on operation mode |
+
+| Feature                     | Description                                                                                                                                                           |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Built-in Pricing Engine** | Hardcoded DeepSeek V4 Pro/Flash rate tables with cache hit/miss differential pricing, automatically switches between promotional and base pricing by date             |
+| **Cost Tracker**            | Per-turn token usage and cost records with history queries and session totals, displayed in CNY by default                                                            |
+| **Smart Routing**           | Heuristic rules based on context length, message count, and tool types to auto-select Flash or Pro model, dynamically adjusts reasoning depth based on operation mode |
+
 
 ### Recursive Language Model (RLM)
 
-| Feature | Description |
-|---------|-------------|
-| **RLM Bridge** | Handles oversized context by chunking large files/codebases and delegating to a lightweight child model (default: `deepseek-v4-flash`) |
-| **Batch Queries** | Supports `llm_query_batched` for submitting multiple analysis tasks at once |
-| **Python REPL Integration** | Optional Python sidecar process for extended analysis via JSON-RPC |
-| **Recursion Depth Control** | Configurable max recursion depth to prevent runaway consumption |
+
+| Feature                     | Description                                                                                                                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **RLM Bridge**              | Handles oversized context by delegating large file content to a lightweight child model (default: `deepseek-v4-flash`), avoiding parent context window consumption                   |
+| **Batch Queries**           | Supports `llm_query_batched` for submitting multiple analysis tasks in parallel                                                                                                      |
+| **Python REPL Integration** | Optional: enable a Python sidecar process by setting the `RLM_PYTHON_SCRIPT` environment variable, communicating via JSON-RPC protocol. Requires a user-provided Python entry script |
+| **Recursion Depth Control** | Configurable max recursion depth (default: 1) to prevent runaway consumption                                                                                                         |
+
 
 ### Sub-Agent Orchestration
 
-| Feature | Description |
-|---------|-------------|
-| **Role Types** | 7 predefined roles: `general` / `explore` / `plan` / `review` / `implementer` / `verifier` / `custom` |
-| **Concurrency Control** | Up to 20 concurrent sub-agents with resource leases to prevent file write conflicts |
-| **Structured Output** | Unified Summary / Evidence / Changes / Risks / Blockers return format |
-| **Persistence** | Sub-agent state serializable to JSON for session recovery |
-| **Tool Set** | `agent_spawn` / `agent_wait` / `agent_message` / `agent_cancel` / `agent_list` |
+
+| Feature                 | Description                                                                                                                   |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Role Types**          | 7 predefined roles: `general` / `explore` / `plan` / `review` / `implementer` / `verifier` / `custom`                         |
+| **Concurrency Control** | Up to 20 concurrent sub-agents with resource leases to prevent file write conflicts                                           |
+| **Structured Output**   | Summary / Evidence / Changes / Risks / Blockers format enforced via system prompts (prompt-based, not JSON Schema validation) |
+| **Persistence**         | Sub-agent state serializable to JSON for session recovery                                                                     |
+| **Tool Set**            | `agent_spawn` / `agent_wait` / `agent_message` / `agent_cancel` / `agent_list`                                                |
+
 
 ### Execution Policy Engine
 
-| Feature | Description |
-|---------|-------------|
-| **Layered Rules** | Three-tier policy stack: `builtinDefault` < `agent` < `user`, deny rules take priority |
-| **Command Argument Awareness** | Built-in subcommand table for 150+ commands (e.g. `git status` vs `git push --force`), precise subcommand-level policy matching |
-| **Safe Defaults** | Read-only commands (`ls`, `cat`, `git log`) trusted by default, dangerous commands (`rm -rf`, `git push --force`) denied by default |
-| **Approval Flow** | Unknown commands trigger approval requests with trust amendment suggestions |
+
+| Feature                        | Description                                                                                                                         |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Layered Rules**              | Three-tier policy stack: `builtinDefault` < `agent` < `user`, deny rules take priority                                              |
+| **Command Argument Awareness** | Built-in subcommand table for 150+ commands (e.g. `git status` vs `git push --force`), precise subcommand-level policy matching     |
+| **Safe Defaults**              | Read-only commands (`ls`, `cat`, `git log`) trusted by default, dangerous commands (`rm -rf`, `git push --force`) denied by default |
+| **Approval Flow**              | Unknown commands trigger approval requests with trust amendment suggestions                                                         |
+
 
 ### LSP Diagnostics Integration
 
-| Feature | Description |
-|---------|-------------|
-| **Auto Diagnostics** | Automatically fetches language server errors/warnings after file edits |
-| **Multi-Language Support** | Built-in configurations for `typescript-language-server`, `pyright`, `rust-analyzer` |
-| **Context Injection** | Diagnostic results automatically injected into model context to guide the next fix |
+
+| Feature                    | Description                                                                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Edit Diagnostics**       | Fetches language server errors/warnings after file write/edit operations via extension hooks (requires `lspEnabled` in config) |
+| **Multi-Language Support** | Built-in configurations for `typescript-language-server`, `pyright`, `rust-analyzer`                                           |
+| **Error Appending**        | Diagnostic errors from edit operations are appended to tool results for the model to reference and fix in the next turn        |
+
 
 ### Resilient Sessions
 
-| Feature | Description |
-|---------|-------------|
-| **Side-Git Snapshots** | Automatically creates `git stash` snapshots before each turn (up to 50), without affecting the project repository |
-| **Snapshot Rollback** | Restore to any historical state by `turnId` |
-| **Cache-Aware Compaction** | Intelligent context compression based on cache hit ratios and context utilization |
+
+| Feature                | Description                                                                                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Side-Git Snapshots** | Automatically creates `git stash` snapshots before each turn (up to 50), without affecting the project repository                                      |
+| **Snapshot Rollback**  | Restore to any historical state by `turnId` (slash commands `/snapshot-list`, `/snapshot-restore`)                                                     |
+| **Compaction Advisor** | Provides compaction recommendations (`CompactionAdvice`) based on cache hit ratios and context utilization; actual compaction is performed by the host |
+
 
 ### Inherited from pi-mono
 
@@ -148,11 +160,13 @@ dsc CLI → Argument translation + identity prompt injection + API key detection
 
 ## Execution Modes
 
-| Mode | Trigger | Behavior |
-|------|---------|----------|
-| **Plan** | `--mode plan` | Read-only -- can only read files and search, no modifications |
-| **Agent** | Default | Interactive -- write operations require user approval |
-| **YOLO** | `--mode yolo` | Full auto -- all operations auto-approved, for trusted workspaces |
+
+| Mode      | Trigger       | Behavior                                                          |
+| --------- | ------------- | ----------------------------------------------------------------- |
+| **Plan**  | `--mode plan` | Read-only -- can only read files and search, no modifications     |
+| **Agent** | Default       | Interactive -- write operations require user approval             |
+| **YOLO**  | `--mode yolo` | Full auto -- all operations auto-approved, for trusted workspaces |
+
 
 ---
 
@@ -181,13 +195,15 @@ Located at `~/.ds/agent/config.json`:
 
 ### Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `DEEPSEEK_API_KEY` | DeepSeek API key |
-| `DS_MODEL` | Default model (overrides config file) |
+
+| Variable              | Description                                                        |
+| --------------------- | ------------------------------------------------------------------ |
+| `DEEPSEEK_API_KEY`    | DeepSeek API key                                                   |
+| `DS_MODEL`            | Default model (overrides config file)                              |
 | `DS_REASONING_EFFORT` | Default reasoning depth: `off` / `low` / `medium` / `high` / `max` |
-| `DS_MODE` | Default mode: `plan` / `agent` / `yolo` |
-| `DS_DEBUG` | Set to `1` to output debug info (shows arguments passed to pi) |
+| `DS_MODE`             | Default mode: `plan` / `agent` / `yolo`                            |
+| `DS_DEBUG`            | Set to `1` to output debug info (shows arguments passed to pi)     |
+
 
 ### CLI Arguments
 
@@ -209,10 +225,12 @@ Options:
 
 ## Models and Pricing
 
-| Model | Context Window | Input (Cache Hit) | Input (Cache Miss) | Output |
-|-------|---------------|-------------------|-------------------|--------|
-| `deepseek-v4-pro` | 1M tokens | ¥0.026/M | ¥3.14/M | ¥6.28/M |
-| `deepseek-v4-flash` | 1M tokens | ¥0.020/M | ¥1.01/M | ¥2.02/M |
+
+| Model               | Context Window | Input (Cache Hit) | Input (Cache Miss) | Output  |
+| ------------------- | -------------- | ----------------- | ------------------ | ------- |
+| `deepseek-v4-pro`   | 1M tokens      | ¥0.026/M          | ¥3.14/M            | ¥6.28/M |
+| `deepseek-v4-flash` | 1M tokens      | ¥0.020/M          | ¥1.01/M            | ¥2.02/M |
+
 
 > V4 Pro currently enjoys a 75% promotional discount, valid until May 31, 2026, 15:59 UTC.
 > For latest pricing, see the [DeepSeek pricing page](https://api-docs.deepseek.com/quick_start/pricing).
@@ -221,14 +239,16 @@ Options:
 
 ## Package Overview
 
-| Package | npm Name | Description |
-|---------|----------|-------------|
-| **ds-agent** | `@deepseek/ds-agent` | `dsc` CLI entry point, argument translation, DeepSeek configuration |
-| **ds-core** | `@deepseek/ds-core` | DeepSeek core library: pricing, routing, RLM, sub-agents, policy, LSP, sessions |
-| **ai** | `@mariozechner/pi-ai` | Unified multi-model LLM API (OpenAI, Anthropic, Google, DeepSeek, etc.) |
-| **agent** | `@mariozechner/pi-agent-core` | Agent runtime: transport abstraction, tool calls, state management |
-| **coding-agent** | `@mariozechner/pi-coding-agent` | Interactive coding agent CLI |
-| **tui** | `@mariozechner/pi-tui` | Terminal UI library (diff rendering) |
+
+| Package          | npm Name                        | Description                                                                     |
+| ---------------- | ------------------------------- | ------------------------------------------------------------------------------- |
+| **ds-agent**     | `@deepseek/ds-agent`            | `dsc` CLI entry point, argument translation, DeepSeek configuration             |
+| **ds-core**      | `@deepseek/ds-core`             | DeepSeek core library: pricing, routing, RLM, sub-agents, policy, LSP, sessions |
+| **ai**           | `@mariozechner/pi-ai`           | Unified multi-model LLM API (OpenAI, Anthropic, Google, DeepSeek, etc.)         |
+| **agent**        | `@mariozechner/pi-agent-core`   | Agent runtime: transport abstraction, tool calls, state management              |
+| **coding-agent** | `@mariozechner/pi-coding-agent` | Interactive coding agent CLI                                                    |
+| **tui**          | `@mariozechner/pi-tui`          | Terminal UI library (diff rendering)                                            |
+
 
 ---
 
@@ -275,12 +295,11 @@ DS_DEBUG=1 DEEPSEEK_API_KEY=sk-xxx npx dsc --print "hello"
 
 ## Roadmap
 
-- Full ds-core capability integration into dsc CLI (pricing dashboard, RLM tools, sub-agent commands)
-- Auto Mode: automatic Flash/Pro + reasoning depth selection
+- ~~Full ds-core capability integration into dsc CLI (pricing dashboard, RLM tools, sub-agent commands)~~ **Done**
+- ~~Compaction advisor~~ **Done** (provides compaction timing recommendations; actual compaction is performed by the host)
+- ~~Auto Mode: automatic Flash/Pro + reasoning depth selection~~ **Done** (heuristic routing + autoReasoning dynamic adjustment)
+- Built-in RLM Python entry script (eliminate need for manual `RLM_PYTHON_SCRIPT` configuration)
 - Prefix cache control optimization
-- Cache-aware context compression
-- Web UI integration
-- Plugin marketplace
 
 ---
 

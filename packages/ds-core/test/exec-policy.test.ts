@@ -1,8 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { ExecPolicyEngine } from "../src/exec-policy/engine.js";
 import type { ExecPolicyContext } from "../src/exec-policy/types.js";
 
-function check(engine: ExecPolicyEngine, command: string, askForApproval: ExecPolicyContext["askForApproval"] = "auto") {
+function check(
+	engine: ExecPolicyEngine,
+	command: string,
+	askForApproval: ExecPolicyContext["askForApproval"] = "auto",
+) {
 	return engine.check({ command, cwd: "/tmp", askForApproval });
 }
 

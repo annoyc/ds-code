@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { BashArityDict } from "../src/exec-policy/bash-arity.js";
 
 describe("BashArityDict", () => {

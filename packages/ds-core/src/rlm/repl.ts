@@ -1,9 +1,9 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import readline from "node:readline";
-import { randomBytes } from "node:crypto";
 import type { RlmBridge } from "./bridge.js";
 import type { RpcRequest, RpcResponse } from "./types.js";
 
@@ -58,14 +58,10 @@ export class RlmRepl {
 	async runTurn(content: string, prompt: string): Promise<string> {
 		const proc = this.process;
 		if (!proc?.stdin || !proc.stdout) {
-			throw new Error(
-				"RLM Python runtime is not configured: set RLM_PYTHON_SCRIPT to the entry module path (TODO)",
-			);
+			throw new Error("RLM Python runtime is not configured: set RLM_PYTHON_SCRIPT to the entry module path (TODO)");
 		}
 		const stderrChunks: Buffer[] = [];
-		proc.stderr?.on("data", (c: Buffer | string) =>
-			stderrChunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)),
-		);
+		proc.stderr?.on("data", (c: Buffer | string) => stderrChunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
 
 		const contentPath = await this.streamContentToFile(content);
 		try {

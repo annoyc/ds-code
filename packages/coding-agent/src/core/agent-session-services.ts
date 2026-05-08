@@ -9,8 +9,8 @@ import { DefaultResourceLoader, type DefaultResourceLoaderOptions, type Resource
 import {
 	type CreateAgentSessionOptions,
 	type CreateAgentSessionResult,
-	type ModelRouterFn,
 	createAgentSession,
+	type ModelRouterFn,
 } from "./sdk.js";
 import type { SessionManager } from "./session-manager.js";
 import { SettingsManager } from "./settings-manager.js";

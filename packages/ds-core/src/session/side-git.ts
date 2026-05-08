@@ -1,5 +1,5 @@
-import { execFile } from "child_process";
 import { createInterface } from "node:readline/promises";
+import { execFile } from "child_process";
 import { promisify } from "util";
 
 const execFileAsync = promisify(execFile);

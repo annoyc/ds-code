@@ -42,9 +42,7 @@ export async function classifyQuery(
 	options: ClassifyOptions,
 ): Promise<QueryComplexity | undefined> {
 	const truncated =
-		userMessage.length > MAX_QUERY_LENGTH
-			? userMessage.slice(0, MAX_QUERY_LENGTH) + "..."
-			: userMessage;
+		userMessage.length > MAX_QUERY_LENGTH ? `${userMessage.slice(0, MAX_QUERY_LENGTH)}...` : userMessage;
 
 	const baseUrl = options.baseUrl ?? "https://api.deepseek.com";
 	const model = options.model ?? "deepseek-v4-flash";

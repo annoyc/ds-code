@@ -10,12 +10,7 @@ import type {
 	SubAgentStatus,
 	SubAgentType,
 } from "./types.js";
-import {
-	DEFAULT_MAX_CONCURRENT,
-	DEFAULT_STEP_TIMEOUT,
-	MAX_SUBAGENTS_CEILING,
-	SUBAGENT_TYPE_ALIASES,
-} from "./types.js";
+import { DEFAULT_MAX_CONCURRENT, DEFAULT_STEP_TIMEOUT, MAX_SUBAGENTS_CEILING, SUBAGENT_TYPE_ALIASES } from "./types.js";
 
 const SUBAGENTS_FILE_SCHEMA_VERSION = 1;
 
@@ -43,15 +38,7 @@ function resolveSubAgentType(raw: string): SubAgentType {
 	if (alias) {
 		return alias;
 	}
-	const allowed: SubAgentType[] = [
-		"general",
-		"explore",
-		"plan",
-		"review",
-		"implementer",
-		"verifier",
-		"custom",
-	];
+	const allowed: SubAgentType[] = ["general", "explore", "plan", "review", "implementer", "verifier", "custom"];
 	if (!allowed.includes(key as SubAgentType)) {
 		throw new Error(`Unknown sub-agent type: ${raw}`);
 	}
@@ -129,11 +116,7 @@ export class SubAgentManager {
 		}
 	}
 
-	private async runAgent(
-		info: SubAgentInfo,
-		options: SubAgentSpawnOptions,
-		signal: AbortSignal,
-	): Promise<void> {
+	private async runAgent(info: SubAgentInfo, options: SubAgentSpawnOptions, signal: AbortSignal): Promise<void> {
 		const id = info.id;
 		const row = this.agents.get(id);
 		if (!row) {
@@ -379,13 +362,7 @@ export class SubAgentManager {
 }
 
 function normalizeLoadedStatus(s: SubAgentStatus | string | undefined): SubAgentStatus {
-	if (
-		s === "pending" ||
-		s === "running" ||
-		s === "completed" ||
-		s === "failed" ||
-		s === "cancelled"
-	) {
+	if (s === "pending" || s === "running" || s === "completed" || s === "failed" || s === "cancelled") {
 		return s;
 	}
 	return "failed";

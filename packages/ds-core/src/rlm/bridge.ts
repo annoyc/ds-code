@@ -16,11 +16,7 @@ export class RlmBridge {
 	private depthRemaining: number;
 	private cumulativeUsage: RlmUsage = { inputTokens: 0, outputTokens: 0 };
 
-	constructor(
-		createMessage: CreateMessageFn,
-		config?: Partial<RlmConfig>,
-		depthRemaining?: number,
-	) {
+	constructor(createMessage: CreateMessageFn, config?: Partial<RlmConfig>, depthRemaining?: number) {
 		this.config = { ...DEFAULT_CONFIG, ...config };
 		this.createMessage = createMessage;
 		this.depthRemaining = depthRemaining ?? this.config.maxDepth;
@@ -114,10 +110,7 @@ export class RlmBridge {
 					return { type: "error", message };
 				}
 			case "llm_query_batched": {
-				const results = await this.dispatchLlmBatch(
-					request.params.prompts,
-					request.params.system,
-				);
+				const results = await this.dispatchLlmBatch(request.params.prompts, request.params.system);
 				return { type: "batch", results };
 			}
 			case "rlm_query":

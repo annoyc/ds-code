@@ -344,7 +344,11 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions", OpenA
 										thinkingSignature: foundReasoningField,
 									};
 									output.content.push(currentBlock);
-									stream.push({ type: "thinking_start", contentIndex: currentContentIndex(), partial: output });
+									stream.push({
+										type: "thinking_start",
+										contentIndex: currentContentIndex(),
+										partial: output,
+									});
 								}
 
 								if (currentBlock.type === "thinking") {

@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { isPlanModeAllowed, PLAN_MODE_TOOLS } from "../src/modes/plan-mode.js";
-import { isYoloMode, createYoloApprovalHandler } from "../src/modes/yolo-mode.js";
+import { createYoloApprovalHandler, isYoloMode } from "../src/modes/yolo-mode.js";
 
 describe("plan-mode", () => {
 	it("PLAN_MODE_TOOLS contains read-only tools", () => {

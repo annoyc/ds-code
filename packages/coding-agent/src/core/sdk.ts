@@ -196,10 +196,7 @@ function getAttributionHeaders(
 	return undefined;
 }
 
-function buildModelRouteContext(
-	currentModel: Model<any>,
-	context: { messages: Message[] },
-): ModelRouteContext {
+function buildModelRouteContext(currentModel: Model<any>, context: { messages: Message[] }): ModelRouteContext {
 	const messages = context.messages;
 	const messageCount = messages.length;
 
@@ -482,12 +479,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			let effectiveModel = model;
 
 			if (modelRouterFn) {
-				const routeResult = await resolveRoutedModel(
-					modelRouterFn,
-					model,
-					context,
-					modelRegistry,
-				);
+				const routeResult = await resolveRoutedModel(modelRouterFn, model, context, modelRegistry);
 				if (routeResult) {
 					effectiveModel = routeResult;
 				}

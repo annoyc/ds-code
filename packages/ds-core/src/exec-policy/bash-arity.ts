@@ -231,9 +231,7 @@ export class BashArityDict {
 		if (tokens.length === 0) {
 			return "";
 		}
-		const positional = tokens
-			.filter((t) => !t.startsWith("-"))
-			.map((t) => t.toLowerCase());
+		const positional = tokens.filter((t) => !t.startsWith("-")).map((t) => t.toLowerCase());
 		if (positional.length === 0) {
 			return "";
 		}
@@ -259,9 +257,6 @@ export class BashArityDict {
 		}
 		const patternNorm = collapseWhitespace(patternLower);
 		const commandNorm = collapseWhitespace(command.trim().toLowerCase());
-		return (
-			commandNorm === patternNorm ||
-			commandNorm.startsWith(`${patternNorm} `)
-		);
+		return commandNorm === patternNorm || commandNorm.startsWith(`${patternNorm} `);
 	}
 }

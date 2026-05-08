@@ -88,10 +88,7 @@ export class CostRouter {
 	 * Resolve model using heuristic + optional Pro classification override.
 	 * Pass the classification result when available; otherwise falls back to heuristic.
 	 */
-	resolveModelWithClassification(
-		context: RouteContext,
-		classification: QueryComplexity | undefined,
-	): string {
+	resolveModelWithClassification(context: RouteContext, classification: QueryComplexity | undefined): string {
 		const heuristic = this.resolveModelHeuristic(context);
 		if (!classification) return heuristic.model;
 
@@ -115,8 +112,7 @@ export class CostRouter {
 		const { messageCount, lastToolCalls } = context;
 		const tools = lastToolCalls ?? [];
 
-		const readOnlySession =
-			tools.length === 0 || tools.every((t) => isReadOnlyTool(t) && !isComplexTool(t));
+		const readOnlySession = tools.length === 0 || tools.every((t) => isReadOnlyTool(t) && !isComplexTool(t));
 		if (messageCount <= 2 && readOnlySession) {
 			return "off";
 		}

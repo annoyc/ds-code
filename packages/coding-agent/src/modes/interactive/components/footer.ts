@@ -165,11 +165,7 @@ export class FooterComponent implements Component {
 
 		// Append routing indicator when a different model was used for the last turn
 		let routingIndicator = "";
-		if (
-			this.lastRoutedModelId &&
-			state.model &&
-			this.lastRoutedModelId !== state.model.id
-		) {
+		if (this.lastRoutedModelId && state.model && this.lastRoutedModelId !== state.model.id) {
 			const shortName = this.lastRoutedModelId.replace(/^.*-v\d+-/, "");
 			routingIndicator = ` (→${shortName})`;
 		}

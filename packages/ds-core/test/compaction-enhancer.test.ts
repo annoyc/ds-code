@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { enhanceCompaction, createOverflowRecovery } from "../src/session/compaction-enhancer.js";
+import { describe, expect, it } from "vitest";
+import { createOverflowRecovery, enhanceCompaction } from "../src/session/compaction-enhancer.js";
 
 describe("enhanceCompaction", () => {
 	it("returns undefined for invalid events", async () => {

@@ -8,9 +8,7 @@ export interface RlmConfig {
 	maxTokens: number;
 }
 
-export interface CreateMessageFn {
-	(request: CreateMessageRequest): Promise<CreateMessageResponse>;
-}
+export type CreateMessageFn = (request: CreateMessageRequest) => Promise<CreateMessageResponse>;
 
 export interface CreateMessageRequest {
 	model: string;

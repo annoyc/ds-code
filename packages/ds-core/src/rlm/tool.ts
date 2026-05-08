@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { Type, type Static } from "typebox";
+import { type Static, Type } from "typebox";
 import { RlmBridge } from "./bridge.js";
 import { RlmRepl } from "./repl.js";
 import type { CreateMessageFn } from "./types.js";
@@ -11,14 +11,10 @@ export const DEFAULT_MAX_DEPTH = 1;
 const MAX_INLINE_BYTES = 50 * 1024;
 
 const rlmParamsSchema = Type.Object({
-	file_path: Type.Optional(
-		Type.String({ description: "Path to the file containing large content to process" }),
-	),
+	file_path: Type.Optional(Type.String({ description: "Path to the file containing large content to process" })),
 	content: Type.Optional(Type.String({ description: "Inline content to process (limited to 50KB)" })),
 	prompt: Type.String({ description: "The task/question to apply to the content" }),
-	max_depth: Type.Optional(
-		Type.Number({ description: "Maximum RLM recursion depth", default: 1 }),
-	),
+	max_depth: Type.Optional(Type.Number({ description: "Maximum RLM recursion depth", default: 1 })),
 });
 
 export type RlmToolParams = Static<typeof rlmParamsSchema>;
@@ -43,11 +39,7 @@ export function createRlmToolDefinition(createMessage: CreateMessageFn) {
 		description:
 			"Process large content that exceeds the context window using Recursive Language Model. The content is processed in a separate environment where a child LLM can query it iteratively without consuming the parent context.",
 		parameters: rlmParamsSchema,
-		async execute(
-			_toolCallId: string,
-			params: RlmToolParams,
-			signal?: AbortSignal,
-		) {
+		async execute(_toolCallId: string, params: RlmToolParams, signal?: AbortSignal) {
 			if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
 
 			const fp = params.file_path?.trim();

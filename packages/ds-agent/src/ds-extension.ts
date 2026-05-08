@@ -1,20 +1,21 @@
 import { randomUUID } from "node:crypto";
 import {
-	CostTracker,
-	ExecPolicyEngine,
-	LspClient,
-	SideGitSnapshots,
-	SubAgentManager,
-	createRlmToolDefinition,
-	createSubAgentTools,
-	formatCostEstimate,
 	type CostCurrency,
+	CostTracker,
 	type CreateMessageFn,
 	type CreateMessageRequest,
+	createRlmToolDefinition,
+	createSubAgentTools,
+	ExecPolicyEngine,
+	formatCostEstimate,
+	LspClient,
 	type Ruleset,
+	SideGitSnapshots,
+	SubAgentManager,
 	type SubAgentResult,
 } from "@deepseek/ds-core";
-import { getSessionsDir, type DsConfig } from "./config.js";
+import { type DsConfig, getSessionsDir } from "./config.js";
+import { isYoloMode } from "./modes/yolo-mode.js";
 
 interface ToolCallEvent {
 	type: "tool_call";
@@ -80,7 +81,7 @@ interface AgentToolResult {
 	isError?: boolean;
 }
 
-type ExtensionHandler<E, R = void> = (event: E, ctx: ExtensionContext) => Promise<R | void> | R | void;
+type ExtensionHandler<E, R = void> = (event: E, ctx: ExtensionContext) => Promise<R | undefined> | R | undefined;
 
 interface ExtensionAPI {
 	on(event: "tool_call", handler: ExtensionHandler<ToolCallEvent, ToolCallEventResult>): void;
@@ -91,13 +92,16 @@ interface ExtensionAPI {
 	on(event: "session_shutdown", handler: ExtensionHandler<SessionShutdownEvent>): void;
 	on(event: string, handler: ExtensionHandler<any, any>): void;
 	registerTool(tool: any): void;
-	registerCommand(name: string, options: { description?: string; handler: (ctx: ExtensionContext) => Promise<void> | void }): void;
+	registerCommand(
+		name: string,
+		options: { description?: string; handler: (ctx: ExtensionContext) => Promise<void> | void },
+	): void;
 }
 
 export function createDsExtensionFactory(config: DsConfig) {
 	const costTracker = new CostTracker();
 	const policyEngine = buildExecPolicyEngine(config);
-	const isYolo = config.mode === "yolo";
+	const isYolo = isYoloMode();
 	const currency = config.costCurrency as CostCurrency;
 	const modelId = config.model;
 
@@ -282,10 +286,7 @@ function createDeepSeekMessageFn(config: DsConfig): CreateMessageFn {
 			},
 			body: JSON.stringify({
 				model: request.model,
-				messages: [
-					...(request.system ? [{ role: "system", content: request.system }] : []),
-					...request.messages,
-				],
+				messages: [...(request.system ? [{ role: "system", content: request.system }] : []), ...request.messages],
 				max_tokens: request.maxTokens,
 				temperature: request.temperature,
 				top_p: request.topP,
