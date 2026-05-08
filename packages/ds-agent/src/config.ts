@@ -18,6 +18,7 @@ export interface DsConfig {
 	costCurrency: "usd" | "cny";
 	lspEnabled: boolean;
 	apiKey?: string;
+	baseUrl: string;
 	execPolicy: {
 		trustedPrefixes: string[];
 		deniedPrefixes: string[];
@@ -32,6 +33,7 @@ export const DEFAULT_CONFIG: DsConfig = {
 	autoReasoning: true,
 	costCurrency: "cny",
 	lspEnabled: false,
+	baseUrl: "https://api.deepseek.com",
 	execPolicy: {
 		trustedPrefixes: [],
 		deniedPrefixes: [],
@@ -93,6 +95,9 @@ export function loadConfig(): DsConfig {
 			if (typeof parsed.apiKey === "string") {
 				config.apiKey = parsed.apiKey;
 			}
+			if (typeof parsed.baseUrl === "string") {
+				config.baseUrl = parsed.baseUrl;
+			}
 			if (parsed.execPolicy && typeof parsed.execPolicy === "object") {
 				const ep = parsed.execPolicy as Partial<DsConfig["execPolicy"]>;
 				config.execPolicy = {
@@ -117,6 +122,9 @@ export function loadConfig(): DsConfig {
 	}
 	if (process.env.DS_MODE && isAgentMode(process.env.DS_MODE)) {
 		config.mode = process.env.DS_MODE;
+	}
+	if (process.env.DEEPSEEK_BASE_URL) {
+		config.baseUrl = process.env.DEEPSEEK_BASE_URL;
 	}
 
 	return config;

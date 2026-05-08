@@ -228,8 +228,8 @@ Options:
 
 | Model               | Context Window | Input (Cache Hit) | Input (Cache Miss) | Output  |
 | ------------------- | -------------- | ----------------- | ------------------ | ------- |
-| `deepseek-v4-pro`   | 1M tokens      | ¥0.026/M          | ¥3.14/M            | ¥6.28/M |
-| `deepseek-v4-flash` | 1M tokens      | ¥0.020/M          | ¥1.01/M            | ¥2.02/M |
+| `deepseek-v4-pro`   | 1M tokens      | ¥0.025/M          | ¥3.0/M             | ¥6.0/M  |
+| `deepseek-v4-flash` | 1M tokens      | ¥0.020/M          | ¥1.0/M             | ¥2.0/M  |
 
 
 > V4 Pro currently enjoys a 75% promotional discount, valid until May 31, 2026, 15:59 UTC.

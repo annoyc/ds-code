@@ -3116,9 +3116,10 @@ export class InteractiveMode {
 	 * Shows the routed model and accumulated cost for the turn.
 	 */
 	private insertRoutingSummary(routedModel: string, totalCost: number): void {
-		const isCny = process.env.DS_COST_CURRENCY === "cny";
+		const dsCurrency = process.env.DS_COST_CURRENCY;
+		const isCny = dsCurrency === "cny";
 		const currencySymbol = isCny ? "¥" : "$";
-		const displayCost = isCny ? totalCost * 7.3 : totalCost;
+		const displayCost = dsCurrency ? totalCost : isCny ? totalCost * 7.3 : totalCost;
 		const precision = displayCost < 0.001 ? 4 : 3;
 		const costStr =
 			totalCost > 0
@@ -3136,10 +3137,11 @@ export class InteractiveMode {
 		const defaultModelId = this.session.state.model?.id;
 		if (!message.model || !defaultModelId || message.model === defaultModelId) return;
 
-		const isCny = process.env.DS_COST_CURRENCY === "cny";
+		const dsCurrency = process.env.DS_COST_CURRENCY;
+		const isCny = dsCurrency === "cny";
 		const currencySymbol = isCny ? "¥" : "$";
 		const rawCost = message.usage.cost.total;
-		const displayCost = isCny ? rawCost * 7.3 : rawCost;
+		const displayCost = dsCurrency ? rawCost : isCny ? rawCost * 7.3 : rawCost;
 		const precision = displayCost < 0.001 ? 4 : 3;
 		const costStr =
 			rawCost > 0
@@ -5171,9 +5173,10 @@ export class InteractiveMode {
 		info += `${theme.fg("dim", "Total:")} ${stats.tokens.total.toLocaleString()}\n`;
 
 		if (stats.cost > 0) {
-			const isCny = process.env.DS_COST_CURRENCY === "cny";
+			const dsCurrency = process.env.DS_COST_CURRENCY;
+			const isCny = dsCurrency === "cny";
 			const currencySymbol = isCny ? "¥" : "$";
-			const displayCost = isCny ? stats.cost * 7.3 : stats.cost;
+			const displayCost = dsCurrency ? stats.cost : stats.cost;
 			info += `\n${theme.bold("Cost")}\n`;
 			info += `${theme.fg("dim", "Total:")} ${currencySymbol}${displayCost.toFixed(4)}`;
 		}

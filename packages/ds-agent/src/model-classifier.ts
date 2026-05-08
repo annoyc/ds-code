@@ -32,15 +32,18 @@ function extractClassification(text: string | undefined): QueryComplexity | unde
 	return undefined;
 }
 
+export interface ClassifyResult {
+	classification: QueryComplexity | undefined;
+	usage?: { input: number; output: number };
+	model: string;
+}
+
 /**
  * Lightweight classification call.
  * Sends a minimal prompt to determine whether the user query is simple or complex.
- * Returns `undefined` on any error — the caller should fall back to heuristics.
+ * Returns classification result with usage data; classification is `undefined` on error.
  */
-export async function classifyQuery(
-	userMessage: string,
-	options: ClassifyOptions,
-): Promise<QueryComplexity | undefined> {
+export async function classifyQuery(userMessage: string, options: ClassifyOptions): Promise<ClassifyResult> {
 	const truncated =
 		userMessage.length > MAX_QUERY_LENGTH ? `${userMessage.slice(0, MAX_QUERY_LENGTH)}...` : userMessage;
 
@@ -48,7 +51,7 @@ export async function classifyQuery(
 	const model = options.model ?? "deepseek-v4-flash";
 
 	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), CLASSIFICATION_TIMEOUT_MS);
+	const timeout = setTimeout(() => controller.abort("classification timeout"), CLASSIFICATION_TIMEOUT_MS);
 
 	try {
 		if (debug) {
@@ -77,30 +80,34 @@ export async function classifyQuery(
 			if (debug) {
 				console.error(`[ds-classifier] HTTP ${response.status}: ${response.statusText}`);
 			}
-			return undefined;
+			return { classification: undefined, model };
 		}
 
 		const data = (await response.json()) as {
 			choices?: Array<{ message?: { content?: string; reasoning_content?: string } }>;
+			usage?: { prompt_tokens?: number; completion_tokens?: number };
 		};
 		const msg = data.choices?.[0]?.message;
 		const content = msg?.content;
 		const reasoning = msg?.reasoning_content;
 
-		const result = extractClassification(content) ?? extractClassification(reasoning);
+		const classification = extractClassification(content) ?? extractClassification(reasoning);
+		const usage = data.usage
+			? { input: data.usage.prompt_tokens ?? 0, output: data.usage.completion_tokens ?? 0 }
+			: undefined;
 
 		if (debug) {
 			console.error(
-				`[ds-classifier] content="${content ?? ""}" reasoning="${reasoning ? reasoning.slice(0, 80) : ""}" result=${result ?? "UNKNOWN"}`,
+				`[ds-classifier] content="${content ?? ""}" reasoning="${reasoning ? reasoning.slice(0, 80) : ""}" result=${classification ?? "UNKNOWN"} usage=${usage ? `in=${usage.input} out=${usage.output}` : "N/A"}`,
 			);
 		}
 
-		return result;
+		return { classification, usage, model };
 	} catch (err) {
 		if (debug) {
 			console.error("[ds-classifier] error:", err);
 		}
-		return undefined;
+		return { classification: undefined, model };
 	} finally {
 		clearTimeout(timeout);
 	}

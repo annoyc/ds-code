@@ -123,9 +123,10 @@ export class FooterComponent implements Component {
 		// Show cost with "(sub)" indicator if using OAuth subscription
 		const usingSubscription = state.model ? this.session.modelRegistry.isUsingOAuth(state.model) : false;
 		if (totalCost || usingSubscription) {
-			const isCny = process.env.DS_COST_CURRENCY === "cny";
+			const dsCurrency = process.env.DS_COST_CURRENCY;
+			const isCny = dsCurrency === "cny";
 			const currencySymbol = isCny ? "¥" : "$";
-			const displayCost = isCny ? totalCost * 7.3 : totalCost;
+			const displayCost = dsCurrency ? totalCost : isCny ? totalCost * 7.3 : totalCost;
 			const precision = displayCost < 0.001 ? 4 : 3;
 			const costStr = `${currencySymbol}${displayCost.toFixed(precision)}${usingSubscription ? " (sub)" : ""}`;
 			statsParts.push(costStr);

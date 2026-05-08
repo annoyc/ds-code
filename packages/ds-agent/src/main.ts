@@ -1,4 +1,4 @@
-import { CostRouter, type RouteContext } from "@deepseek/ds-core";
+import { CostRouter, CostTracker, type RouteContext } from "@deepseek/ds-core";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { type AgentMode, APP_NAME, type DsConfig, loadConfig } from "./config.js";
@@ -116,6 +116,8 @@ export async function main(argv: string[]): Promise<void> {
 
 	ensureDeepSeekApiKey(config);
 
+	await preflight(config);
+
 	const piArgv = buildPiArgv(argv, args, config);
 
 	type PiMainOptions = { modelRouter?: (ctx: any) => any; extensionFactories?: any[] };
@@ -128,12 +130,13 @@ export async function main(argv: string[]): Promise<void> {
 	}
 
 	const piOptions: PiMainOptions = {};
-	const modelRouter = createModelRouter(config);
+	const sharedCostTracker = new CostTracker();
+	const modelRouter = createModelRouter(config, sharedCostTracker);
 	if (modelRouter) {
 		piOptions.modelRouter = modelRouter;
 	}
 
-	piOptions.extensionFactories = [createDsExtensionFactory(config)];
+	piOptions.extensionFactories = [createDsExtensionFactory(config, sharedCostTracker)];
 
 	if (piMain) {
 		await piMain(piArgv, piOptions);
@@ -181,6 +184,63 @@ function ensureDeepSeekApiKey(config: DsConfig): void {
 			`  获取 API key: https://platform.deepseek.com/api_keys\n`,
 	);
 	process.exit(1);
+}
+
+const PREFLIGHT_TIMEOUT_MS = 10_000;
+
+/**
+ * Quick connectivity check: list models endpoint to verify API reachability + auth.
+ * Fails fast with a clear error instead of hanging for minutes.
+ */
+async function preflight(config: DsConfig): Promise<void> {
+	const apiKey = process.env.DEEPSEEK_API_KEY ?? config.apiKey;
+	if (!apiKey) return;
+
+	const baseUrl = config.baseUrl;
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), PREFLIGHT_TIMEOUT_MS);
+
+	try {
+		const res = await fetch(`${baseUrl}/models`, {
+			headers: { Authorization: `Bearer ${apiKey}` },
+			signal: controller.signal,
+		});
+
+		if (res.status === 401 || res.status === 403) {
+			console.error(
+				`\x1b[31m✗ DeepSeek API 认证失败 (HTTP ${res.status})。请检查 DEEPSEEK_API_KEY 是否有效。\x1b[0m`,
+			);
+			process.exit(1);
+		}
+
+		if (!res.ok && process.env.DS_DEBUG) {
+			console.error(`[ds-preflight] API returned HTTP ${res.status}, proceeding anyway`);
+		}
+	} catch (err) {
+		const isAbort = err instanceof DOMException && err.name === "AbortError";
+		const isNetwork =
+			err instanceof TypeError && ((err as any).cause?.code === "ENOTFOUND" || (err as any).cause?.code === "ECONNREFUSED");
+
+		if (isAbort || isNetwork) {
+			console.error(
+				`\x1b[31m✗ 无法连接到 DeepSeek API (${baseUrl})\x1b[0m\n` +
+					`\n` +
+					`  可能的原因：\n` +
+					`  • 网络连接不可用或被防火墙拦截\n` +
+					`  • DNS 解析失败\n` +
+					`  • 需要配置代理 (HTTPS_PROXY)\n` +
+					`\n` +
+					`  如使用自定义端点，请设置：DEEPSEEK_BASE_URL=https://your-endpoint\n`,
+			);
+			process.exit(1);
+		}
+
+		if (process.env.DS_DEBUG) {
+			console.error("[ds-preflight] connectivity check failed:", err);
+		}
+	} finally {
+		clearTimeout(timer);
+	}
 }
 
 const MODEL_IDENTITY: Record<string, { name: string; maker: string }> = {
@@ -297,6 +357,7 @@ const REASONING_TO_THINKING: Record<string, string> = {
 
 function createModelRouter(
 	config: DsConfig,
+	costTracker?: CostTracker,
 ):
 	| ((ctx: ModelRouteContext) => Promise<{ provider: string; modelId: string; thinkingLevel?: string } | undefined>)
 	| undefined {
@@ -316,43 +377,58 @@ function createModelRouter(
 	const apiKey = process.env.DEEPSEEK_API_KEY ?? config.apiKey;
 
 	return async (ctx: ModelRouteContext) => {
-		const routeCtx: RouteContext = {
-			messageCount: ctx.messageCount,
-			lastToolCalls: ctx.lastToolCalls,
-			estimatedInputTokens: ctx.estimatedInputTokens,
-			userMode: (process.env.DS_MODE as RouteContext["userMode"]) ?? undefined,
-		};
+		try {
+			const routeCtx: RouteContext = {
+				messageCount: ctx.messageCount,
+				lastToolCalls: ctx.lastToolCalls,
+				estimatedInputTokens: ctx.estimatedInputTokens,
+				userMode: (process.env.DS_MODE as RouteContext["userMode"]) ?? undefined,
+			};
 
-		const heuristic = router.resolveModelHeuristic(routeCtx);
+			const heuristic = router.resolveModelHeuristic(routeCtx);
 
-		let finalModelId = heuristic.model;
+			let finalModelId = heuristic.model;
 
-		if (heuristic.needsClassification && ctx.lastUserMessage && apiKey) {
-			const classification = await classifyQuery(ctx.lastUserMessage, { apiKey });
+			if (heuristic.needsClassification && ctx.lastUserMessage && apiKey) {
+				const result = await classifyQuery(ctx.lastUserMessage, { apiKey, baseUrl: config.baseUrl }).catch(() => ({
+					classification: undefined as undefined,
+					usage: undefined as undefined,
+					model: "deepseek-v4-flash",
+				}));
 
-			if (classification) {
-				finalModelId = router.resolveModelWithClassification(routeCtx, classification);
+				if (result.usage && costTracker) {
+					costTracker.report(result.model, result.usage);
+				}
+
+				if (result.classification) {
+					finalModelId = router.resolveModelWithClassification(routeCtx, result.classification);
+				}
+
+				if (process.env.DS_DEBUG) {
+					console.error(
+						`[ds-router] classification=${result.classification ?? "FAILED"} heuristic=${heuristic.model} final=${finalModelId}`,
+					);
+				}
+			} else if (process.env.DS_DEBUG) {
+				console.error(`[ds-router] heuristic=${heuristic.model} (no classification needed)`);
 			}
+
+			const effort = router.resolveReasoningEffort(routeCtx);
+			const thinkingLevel = REASONING_TO_THINKING[effort];
 
 			if (process.env.DS_DEBUG) {
 				console.error(
-					`[ds-router] classification=${classification ?? "FAILED"} heuristic=${heuristic.model} final=${finalModelId}`,
+					`[ds-router] reasoning: autoReasoning=${config.autoReasoning} effort=${effort} thinking=${thinkingLevel}`,
 				);
 			}
-		} else if (process.env.DS_DEBUG) {
-			console.error(`[ds-router] heuristic=${heuristic.model} (no classification needed)`);
+
+			return { provider: "deepseek", modelId: finalModelId, thinkingLevel };
+		} catch (err) {
+			if (process.env.DS_DEBUG) {
+				console.error("[ds-router] error, falling back to default:", err);
+			}
+			return { provider: "deepseek", modelId: config.model };
 		}
-
-		const effort = router.resolveReasoningEffort(routeCtx);
-		const thinkingLevel = REASONING_TO_THINKING[effort];
-
-		if (process.env.DS_DEBUG) {
-			console.error(
-				`[ds-router] reasoning: autoReasoning=${config.autoReasoning} effort=${effort} thinking=${thinkingLevel}`,
-			);
-		}
-
-		return { provider: "deepseek", modelId: finalModelId, thinkingLevel };
 	};
 }
 

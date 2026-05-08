@@ -4,6 +4,7 @@ import {
 	CostTracker,
 	type CreateMessageFn,
 	type CreateMessageRequest,
+	calculateTurnCost,
 	createRlmToolDefinition,
 	createSubAgentTools,
 	ExecPolicyEngine,
@@ -98,8 +99,8 @@ interface ExtensionAPI {
 	): void;
 }
 
-export function createDsExtensionFactory(config: DsConfig) {
-	const costTracker = new CostTracker();
+export function createDsExtensionFactory(config: DsConfig, sharedCostTracker?: CostTracker) {
+	const costTracker = sharedCostTracker ?? new CostTracker();
 	const policyEngine = buildExecPolicyEngine(config);
 	const isYolo = isYoloMode();
 	const currency = config.costCurrency as CostCurrency;
@@ -128,6 +129,29 @@ export function createDsExtensionFactory(config: DsConfig) {
 			}
 
 			return undefined;
+		});
+
+		pi.on("message_end", (event: Record<string, any>) => {
+			try {
+				const msg = event?.message;
+				if (!msg || msg.role !== "assistant" || !msg.usage?.cost) return undefined;
+				const usedModel = (msg.model as string) ?? modelId;
+				const cost = calculateTurnCost(usedModel, {
+					input: msg.usage.input ?? 0,
+					output: msg.usage.output ?? 0,
+					cacheRead: msg.usage.cacheRead ?? 0,
+				});
+				if (!cost) return undefined;
+				const nativeCost = currency === "cny" ? cost.cny : cost.usd;
+				return {
+					message: {
+						...msg,
+						usage: { ...msg.usage, cost: { ...msg.usage.cost, total: nativeCost } },
+					},
+				};
+			} catch {
+				return undefined;
+			}
 		});
 
 		pi.on("turn_end", (event: TurnEndEvent) => {
@@ -275,7 +299,7 @@ function buildExecPolicyEngine(config: DsConfig): ExecPolicyEngine | null {
 
 function createDeepSeekMessageFn(config: DsConfig): CreateMessageFn {
 	const apiKey = process.env.DEEPSEEK_API_KEY ?? config.apiKey;
-	const baseUrl = "https://api.deepseek.com";
+	const baseUrl = config.baseUrl;
 
 	return async (request: CreateMessageRequest) => {
 		const response = await fetch(`${baseUrl}/chat/completions`, {
