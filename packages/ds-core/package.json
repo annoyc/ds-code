@@ -10,10 +10,14 @@
 		"clean": "shx rm -rf dist",
 		"build": "tsgo -p tsconfig.build.json",
 		"dev": "tsgo -p tsconfig.build.json --watch --preserveWatchOutput",
+		"test": "vitest --run",
 		"prepublishOnly": "npm run clean && npm run build"
 	},
 	"dependencies": {
 		"typebox": "^1.1.24"
+	},
+	"devDependencies": {
+		"vitest": "^3.2.4"
 	},
 	"engines": {
 		"node": ">=20.0.0"

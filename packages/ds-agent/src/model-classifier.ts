@@ -49,10 +49,10 @@ export async function classifyQuery(
 	const baseUrl = options.baseUrl ?? "https://api.deepseek.com";
 	const model = options.model ?? "deepseek-v4-flash";
 
-	try {
-		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), CLASSIFICATION_TIMEOUT_MS);
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), CLASSIFICATION_TIMEOUT_MS);
 
+	try {
 		if (debug) {
 			console.error(`[ds-classifier] calling ${baseUrl}/chat/completions model=${model}`);
 		}
@@ -75,8 +75,6 @@ export async function classifyQuery(
 			signal: controller.signal,
 		});
 
-		clearTimeout(timeout);
-
 		if (!response.ok) {
 			if (debug) {
 				console.error(`[ds-classifier] HTTP ${response.status}: ${response.statusText}`);
@@ -91,8 +89,6 @@ export async function classifyQuery(
 		const content = msg?.content;
 		const reasoning = msg?.reasoning_content;
 
-		// Try content first, fall back to reasoning_content (reasoning models
-		// may put the answer there when content is empty)
 		const result = extractClassification(content) ?? extractClassification(reasoning);
 
 		if (debug) {
@@ -107,5 +103,7 @@ export async function classifyQuery(
 			console.error("[ds-classifier] error:", err);
 		}
 		return undefined;
+	} finally {
+		clearTimeout(timeout);
 	}
 }

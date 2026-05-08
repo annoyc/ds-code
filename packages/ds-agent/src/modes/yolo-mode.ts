@@ -3,7 +3,7 @@ export function isYoloMode(): boolean {
 }
 
 export function createYoloApprovalHandler() {
-	return async (_event: unknown) => {
-		return undefined;
+	return async (_event: { input?: Record<string, unknown> }) => {
+		return { block: false } as const;
 	};
 }

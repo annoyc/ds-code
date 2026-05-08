@@ -8,6 +8,8 @@ import {
 } from "./config.js";
 import { CostRouter, type RouteContext } from "@deepseek/ds-core";
 import { classifyQuery } from "./model-classifier.js";
+import { PLAN_MODE_TOOLS } from "./modes/index.js";
+import { createDsExtensionFactory } from "./ds-extension.js";
 
 interface CliArgs {
 	prompt?: string;
@@ -52,16 +54,16 @@ function parseArgs(argv: string[]): CliArgs {
 				}
 				break;
 			}
-		case "--model":
-			args.model = argv[++i];
-			break;
-		case "--reasoning":
-			args.reasoning = argv[++i];
-			break;
-		case "--api-key":
-			args.apiKey = argv[++i];
-			break;
-		default:
+			case "--model":
+				args.model = argv[++i];
+				break;
+			case "--reasoning":
+				args.reasoning = argv[++i];
+				break;
+			case "--api-key":
+				args.apiKey = argv[++i];
+				break;
+			default:
 				positional.push(a);
 				break;
 		}
@@ -136,6 +138,8 @@ export async function main(argv: string[]): Promise<void> {
 		piOptions.modelRouter = modelRouter;
 	}
 
+	piOptions.extensionFactories = [createDsExtensionFactory(config)];
+
 	if (piMain) {
 		await piMain(piArgv, piOptions);
 	} else {
@@ -178,7 +182,7 @@ function ensureDeepSeekApiKey(config: DsConfig): void {
 			`\n` +
 			`  1. 设置环境变量：export DEEPSEEK_API_KEY=sk-...\n` +
 			`  2. 写入配置文件：echo '{"apiKey":"sk-..."}' > ~/.ds/agent/config.json\n` +
-			`  3. 通过命令行：ds --api-key sk-... "your prompt"\n` +
+			`  3. 通过命令行：dsc --api-key sk-... "your prompt"\n` +
 			`\n` +
 			`  获取 API key: https://platform.deepseek.com/api_keys\n`,
 	);
@@ -260,6 +264,10 @@ function buildPiArgv(originalArgv: string[], args: CliArgs, config: DsConfig): s
 		piArgs.push("--mode", "json");
 	} else if (args.rpc) {
 		piArgs.push("--mode", "rpc");
+	}
+
+	if (config.mode === "plan") {
+		piArgs.push("--tools", PLAN_MODE_TOOLS.join(","));
 	}
 
 	const skipFlags = new Set(["--json", "--rpc"]);
