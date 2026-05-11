@@ -1,5 +1,8 @@
 **ds-code**
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.0.0-green.svg)](https://nodejs.org/)
+
 *DeepSeek Terminal Coding Agent -- Built on pi-mono*
 
 [Quick Start](#quick-start) | [Core Features](#core-features) | [Architecture](#architecture) | [Configuration](#configuration) | [Development](#development) | [中文](README.md)
@@ -14,13 +17,14 @@
 
 ## Quick Start
 
-### 1. Install
+### 1. Clone and Build
 
 ```bash
-git clone https://github.com/yourorg/dsCode.git
-cd dsCode
+git clone https://github.com/annoyc/ds-code.git
+cd ds-code
 npm install --ignore-scripts
 npm run build
+npm link packages/ds-agent            # Register the dsc command locally
 ```
 
 ### 2. Configure API Key
@@ -44,12 +48,14 @@ dsc --api-key sk-your-key-here "your prompt"
 ### 3. Start Using
 
 ```bash
-npx dsc                              # Interactive TUI mode
-npx dsc "explain what this code does" # Single prompt
-npx dsc --model deepseek-v4-flash     # Specify model
-npx dsc --reasoning high "refactor"   # Set reasoning depth
-npx dsc --mode yolo "add unit tests"  # Full auto mode (skip approvals)
+dsc                              # Interactive TUI mode
+dsc "explain what this code does" # Single prompt
+dsc --model deepseek-v4-flash     # Specify model
+dsc --reasoning high "refactor"   # Set reasoning depth
+dsc --mode yolo "add unit tests"  # Full auto mode (skip approvals)
 ```
+
+> If you haven't run `npm link`, use `node packages/ds-agent/dist/cli.js` instead of `dsc`.
 
 ---
 
@@ -72,7 +78,7 @@ npx dsc --mode yolo "add unit tests"  # Full auto mode (skip approvals)
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **RLM Bridge**              | Handles oversized context by delegating large file content to a lightweight child model (default: `deepseek-v4-flash`), avoiding parent context window consumption                   |
 | **Batch Queries**           | Supports `llm_query_batched` for submitting multiple analysis tasks in parallel                                                                                                      |
-| **Python REPL Integration** | Optional: enable a Python sidecar process by setting the `RLM_PYTHON_SCRIPT` environment variable, communicating via JSON-RPC protocol. Requires a user-provided Python entry script |
+| **Python REPL Integration** (experimental) | Optional: enable a Python sidecar process by setting the `RLM_PYTHON_SCRIPT` environment variable, communicating via JSON-RPC protocol. Requires a user-provided Python entry script |
 | **Recursion Depth Control** | Configurable max recursion depth (default: 1) to prevent runaway consumption                                                                                                         |
 
 
@@ -141,6 +147,7 @@ dsCode/
 │   ├── agent/           @mariozechner/pi-agent-core   # Agent runtime (tool calls, state)
 │   ├── coding-agent/    @mariozechner/pi-coding-agent # Coding Agent CLI (pi command)
 │   ├── tui/             @mariozechner/pi-tui          # Terminal UI library (diff rendering)
+│   ├── web-ui/          @mariozechner/pi-web-ui       # AI chat Web UI components
 │   ├── ds-core/         @deepseek/ds-core             # DeepSeek core (pricing/RLM/subagent/policy/LSP/session)
 │   └── ds-agent/        @deepseek/ds-agent            # dsc CLI entry point
 └── ...
@@ -248,6 +255,7 @@ Options:
 | **agent**        | `@mariozechner/pi-agent-core`   | Agent runtime: transport abstraction, tool calls, state management              |
 | **coding-agent** | `@mariozechner/pi-coding-agent` | Interactive coding agent CLI                                                    |
 | **tui**          | `@mariozechner/pi-tui`          | Terminal UI library (diff rendering)                                            |
+| **web-ui**       | `@mariozechner/pi-web-ui`       | Reusable AI chat Web UI components                                             |
 
 
 ---
@@ -290,6 +298,16 @@ DEEPSEEK_API_KEY=sk-xxx npx dsc
 # Debug mode (shows arguments passed to pi)
 DS_DEBUG=1 DEEPSEEK_API_KEY=sk-xxx npx dsc --print "hello"
 ```
+
+---
+
+## Known Limitations
+
+- **RLM Python REPL** requires a user-provided Python entry script via the `RLM_PYTHON_SCRIPT` environment variable; without it, this feature is unavailable
+- **Sub-agent execution** logic is injected by the host (pi-coding-agent); ds-core only provides the orchestration framework
+- **Smart routing classifier** makes a lightweight API call to DeepSeek on first complexity assessment (3s timeout); falls back to default model without network
+- **LSP diagnostics** depend on locally installed language server binaries (e.g. `typescript-language-server`); gracefully degrades when absent
+- **Pricing data** is hardcoded in `ds-core`; manual updates are required after official DeepSeek pricing changes
 
 ---
 

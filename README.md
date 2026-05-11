@@ -1,5 +1,8 @@
 **ds-code**
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.0.0-green.svg)](https://nodejs.org/)
+
 *DeepSeek 终端编程智能体 —— 基于 pi-mono 构建的 AI Coding Agent*
 
 [快速开始](#快速开始) • [核心特性](#核心特性) • [架构概览](#架构概览) • [配置](#配置) • [开发指南](#开发指南) • [English](README.en.md)
@@ -14,13 +17,14 @@
 
 ## 快速开始
 
-### 1. 安装
+### 1. 克隆与构建
 
 ```bash
-git clone https://github.com/yourorg/dsCode.git
-cd dsCode
+git clone https://github.com/annoyc/ds-code.git
+cd ds-code
 npm install --ignore-scripts
 npm run build
+npm link packages/ds-agent            # 注册 dsc 命令到本地 PATH
 ```
 
 ### 2. 配置 API Key
@@ -44,12 +48,14 @@ dsc --api-key sk-your-key-here "你的提示词"
 ### 3. 开始使用
 
 ```bash
-npx dsc                              # 交互式 TUI 模式
-npx dsc "解释这段代码的作用"            # 单次提示
-npx dsc --model deepseek-v4-flash     # 指定模型
-npx dsc --reasoning high "重构这个函数" # 指定推理深度
-npx dsc --mode yolo "添加单元测试"      # 全自动模式（跳过审批）
+dsc                              # 交互式 TUI 模式
+dsc "解释这段代码的作用"            # 单次提示
+dsc --model deepseek-v4-flash     # 指定模型
+dsc --reasoning high "重构这个函数" # 指定推理深度
+dsc --mode yolo "添加单元测试"      # 全自动模式（跳过审批）
 ```
+
+> 如果未执行 `npm link`，可直接运行 `node packages/ds-agent/dist/cli.js` 替代 `dsc`。
 
 ---
 
@@ -72,7 +78,7 @@ npx dsc --mode yolo "添加单元测试"      # 全自动模式（跳过审批�
 | ------------------ | -------------------------------------------------------------------------------------- |
 | **RLM Bridge**     | 处理超长上下文：将大文件内容委托给轻量子模型（默认 `deepseek-v4-flash`）分析，避免消耗父模型上下文窗口                          |
 | **批量查询**           | 支持 `llm_query_batched`，一次性提交多个分析任务并行处理                                                 |
-| **Python REPL 集成** | 可选功能：通过设置 `RLM_PYTHON_SCRIPT` 环境变量启用 Python 侧车进程，经 JSON-RPC 协议扩展分析能力。需自行提供 Python 入口脚本 |
+| **Python REPL 集成** (实验性) | 可选功能：通过设置 `RLM_PYTHON_SCRIPT` 环境变量启用 Python 侧车进程，经 JSON-RPC 协议扩展分析能力。需自行提供 Python 入口脚本 |
 | **递归深度控制**         | 可配置最大递归深度（默认 1），防止无限递归消耗                                                               |
 
 
@@ -141,6 +147,7 @@ dsCode/
 │   ├── agent/           @mariozechner/pi-agent-core   # Agent 运行时（工具调用、状态管理）
 │   ├── coding-agent/    @mariozechner/pi-coding-agent # 编程 Agent CLI（pi 命令）
 │   ├── tui/             @mariozechner/pi-tui          # 终端 UI 库（差分渲染）
+│   ├── web-ui/          @mariozechner/pi-web-ui       # AI 聊天 Web UI 组件
 │   ├── ds-core/         @deepseek/ds-core             # DeepSeek 核心库（定价/RLM/子智能体/策略/LSP/会话）
 │   └── ds-agent/        @deepseek/ds-agent            # dsc CLI 入口
 └── ...
@@ -248,6 +255,7 @@ dsc [选项] [提示词]
 | **agent**        | `@mariozechner/pi-agent-core`   | Agent 运行时：传输抽象、工具调用、状态管理                          |
 | **coding-agent** | `@mariozechner/pi-coding-agent` | 交互式编程 Agent CLI                                   |
 | **tui**          | `@mariozechner/pi-tui`          | 终端 UI 库（差分渲染）                                     |
+| **web-ui**       | `@mariozechner/pi-web-ui`       | 可复用的 AI 聊天 Web UI 组件                              |
 
 
 ---
@@ -290,6 +298,16 @@ DEEPSEEK_API_KEY=sk-xxx npx dsc
 # 调试模式（显示传递给 pi 的参数）
 DS_DEBUG=1 DEEPSEEK_API_KEY=sk-xxx npx dsc --print "hello"
 ```
+
+---
+
+## 已知限制
+
+- **RLM Python REPL** 需要用户自行提供 Python 入口脚本并设置 `RLM_PYTHON_SCRIPT` 环境变量，否则该功能不可用
+- **子智能体执行** 由宿主（pi-coding-agent）注入实际运行逻辑，ds-core 仅提供编排框架
+- **智能路由分类器** 在首次判定复杂度时会向 DeepSeek API 发送轻量请求（超时 3s），无网络环境下降级为默认模型
+- **LSP 诊断** 依赖本地安装对应的语言服务器二进制文件（如 `typescript-language-server`），未安装时优雅降级
+- **定价数据** 硬编码于 `ds-core`，DeepSeek 官方调价后需手动更新
 
 ---
 
