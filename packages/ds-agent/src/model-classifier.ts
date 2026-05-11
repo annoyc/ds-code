@@ -7,7 +7,7 @@ COMPLEX: code generation, debugging, multi-step reasoning, architecture design, 
 
 Reply with exactly one word: SIMPLE or COMPLEX`;
 
-const CLASSIFICATION_TIMEOUT_MS = 8_000;
+const CLASSIFICATION_TIMEOUT_MS = 3_000;
 const MAX_QUERY_LENGTH = 500;
 
 const debug = !!process.env.DS_DEBUG;

@@ -88,7 +88,6 @@ import { parseGitUrl } from "../../utils/git.js";
 import { getPiUserAgent } from "../../utils/pi-user-agent.js";
 import { killTrackedDetachedChildren } from "../../utils/shell.js";
 import { ensureTool } from "../../utils/tools-manager.js";
-import { checkForNewPiVersion } from "../../utils/version-check.js";
 import { ArminComponent } from "./components/armin.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
@@ -306,10 +305,6 @@ export class InteractiveMode {
 
 	// Shutdown state
 	private shutdownRequested = false;
-
-	// Model routing tracking for the current agent turn
-	private turnRoutedModel: string | undefined;
-	private turnRoutedCost = 0;
 
 	// Extension UI state
 	private extensionSelector: ExtensionSelectorComponent | undefined = undefined;
@@ -576,66 +571,9 @@ export class InteractiveMode {
 		// Add header container as first child
 		this.ui.addChild(this.headerContainer);
 
-		// Add header with keybindings from config (unless silenced)
-		if (this.options.verbose || !this.settingsManager.getQuietStartup()) {
-			const logo = theme.bold(theme.fg("accent", APP_NAME)) + theme.fg("dim", ` v${this.version}`);
-
-			// Build startup instructions using keybinding hint helpers
-			const hint = (keybinding: AppKeybinding, description: string) => keyHint(keybinding, description);
-
-			const expandedInstructions = [
-				hint("app.interrupt", "to interrupt"),
-				hint("app.clear", "to clear"),
-				rawKeyHint(`${keyText("app.clear")} twice`, "to exit"),
-				hint("app.exit", "to exit (empty)"),
-				hint("app.suspend", "to suspend"),
-				keyHint("tui.editor.deleteToLineEnd", "to delete to end"),
-				hint("app.thinking.cycle", "to cycle thinking level"),
-				rawKeyHint(`${keyText("app.model.cycleForward")}/${keyText("app.model.cycleBackward")}`, "to cycle models"),
-				hint("app.model.select", "to select model"),
-				hint("app.tools.expand", "to expand tools"),
-				hint("app.thinking.toggle", "to expand thinking"),
-				hint("app.editor.external", "for external editor"),
-				rawKeyHint("/", "for commands"),
-				rawKeyHint("!", "to run bash"),
-				rawKeyHint("!!", "to run bash (no context)"),
-				hint("app.message.followUp", "to queue follow-up"),
-				hint("app.message.dequeue", "to edit all queued messages"),
-				hint("app.clipboard.pasteImage", "to paste image"),
-				rawKeyHint("drop files", "to attach"),
-			].join("\n");
-			const compactInstructions = [
-				hint("app.interrupt", "interrupt"),
-				rawKeyHint(`${keyText("app.clear")}/${keyText("app.exit")}`, "clear/exit"),
-				rawKeyHint("/", "commands"),
-				rawKeyHint("!", "bash"),
-				hint("app.tools.expand", "more"),
-			].join(theme.fg("muted", " · "));
-			const compactOnboarding = theme.fg(
-				"dim",
-				`Press ${keyText("app.tools.expand")} to show full startup help and loaded resources.`,
-			);
-			const onboarding = theme.fg(
-				"dim",
-				`Pi can explain its own features and look up its docs. Ask it how to use or extend Pi.`,
-			);
-			this.builtInHeader = new ExpandableText(
-				() => `${logo}\n${compactInstructions}\n${compactOnboarding}\n\n${onboarding}`,
-				() => `${logo}\n${expandedInstructions}\n\n${onboarding}`,
-				this.getStartupExpansionState(),
-				1,
-				0,
-			);
-
-			// Setup UI layout
-			this.headerContainer.addChild(new Spacer(1));
-			this.headerContainer.addChild(this.builtInHeader);
-			this.headerContainer.addChild(new Spacer(1));
-		} else {
-			// Minimal header when silenced
-			this.builtInHeader = new Text("", 0, 0);
-			this.headerContainer.addChild(this.builtInHeader);
-		}
+		// Minimal header - no startup banner
+		this.builtInHeader = new Text("", 0, 0);
+		this.headerContainer.addChild(this.builtInHeader);
 
 		this.ui.addChild(this.chatContainer);
 		this.ui.addChild(this.pendingMessagesContainer);
@@ -696,19 +634,7 @@ export class InteractiveMode {
 	async run(): Promise<void> {
 		await this.init();
 
-		// Start version check asynchronously
-		checkForNewPiVersion(this.version).then((newVersion) => {
-			if (newVersion) {
-				this.showNewVersionNotification(newVersion);
-			}
-		});
-
-		// Start package update check asynchronously
-		this.checkForPackageUpdates().then((updates) => {
-			if (updates.length > 0) {
-				this.showPackageUpdateNotification(updates);
-			}
-		});
+		// Version and package update checks disabled
 
 		// Check tmux keyboard setup asynchronously
 		this.checkTmuxKeyboardSetup().then((warning) => {
@@ -2638,8 +2564,6 @@ export class InteractiveMode {
 		switch (event.type) {
 			case "agent_start":
 				this.pendingTools.clear();
-				this.turnRoutedModel = undefined;
-				this.turnRoutedCost = 0;
 				this.footer.setLastRoutedModel(undefined);
 				if (this.settingsManager.getShowTerminalProgress()) {
 					this.ui.terminal.setProgress(true);
@@ -2772,11 +2696,9 @@ export class InteractiveMode {
 						}
 					}
 
-					// Track routing info for end-of-turn summary
+					// Track routing info for footer display
 					const defaultModelId = this.session.state.model?.id;
 					if (this.streamingMessage.model && defaultModelId && this.streamingMessage.model !== defaultModelId) {
-						this.turnRoutedModel = this.streamingMessage.model;
-						this.turnRoutedCost += this.streamingMessage.usage.cost.total;
 						this.footer.setLastRoutedModel(this.streamingMessage.model);
 					}
 
@@ -2845,11 +2767,6 @@ export class InteractiveMode {
 					this.streamingMessage = undefined;
 				}
 				this.pendingTools.clear();
-
-				// Show routing summary at the end of the turn
-				if (this.turnRoutedModel) {
-					this.insertRoutingSummary(this.turnRoutedModel, this.turnRoutedCost);
-				}
 
 				await this.checkShutdownRequested();
 
@@ -3112,47 +3029,6 @@ export class InteractiveMode {
 	}
 
 	/**
-	 * Append a routing summary line at the end of the current agent turn.
-	 * Shows the routed model and accumulated cost for the turn.
-	 */
-	private insertRoutingSummary(routedModel: string, totalCost: number): void {
-		const dsCurrency = process.env.DS_COST_CURRENCY;
-		const isCny = dsCurrency === "cny";
-		const currencySymbol = isCny ? "¥" : "$";
-		const displayCost = dsCurrency ? totalCost : isCny ? totalCost * 7.3 : totalCost;
-		const precision = displayCost < 0.001 ? 4 : 3;
-		const costStr =
-			totalCost > 0
-				? ` ${theme.fg("dim", "•")} ${theme.fg("dim", `${currencySymbol}${displayCost.toFixed(precision)}`)}`
-				: "";
-
-		const label = `${theme.fg("muted", "│")} ${theme.fg("dim", "via")} ${theme.fg("accent", routedModel)}${costStr}`;
-		this.chatContainer.addChild(new Text(label, 0, 0));
-	}
-
-	/**
-	 * Insert a routing tag for a historical assistant message (session replay).
-	 */
-	private insertHistoryRoutingTag(message: AssistantMessage): void {
-		const defaultModelId = this.session.state.model?.id;
-		if (!message.model || !defaultModelId || message.model === defaultModelId) return;
-
-		const dsCurrency = process.env.DS_COST_CURRENCY;
-		const isCny = dsCurrency === "cny";
-		const currencySymbol = isCny ? "¥" : "$";
-		const rawCost = message.usage.cost.total;
-		const displayCost = dsCurrency ? rawCost : isCny ? rawCost * 7.3 : rawCost;
-		const precision = displayCost < 0.001 ? 4 : 3;
-		const costStr =
-			rawCost > 0
-				? ` ${theme.fg("dim", "•")} ${theme.fg("dim", `${currencySymbol}${displayCost.toFixed(precision)}`)}`
-				: "";
-
-		const label = `${theme.fg("muted", "│")} ${theme.fg("dim", "via")} ${theme.fg("accent", message.model)}${costStr}`;
-		this.chatContainer.addChild(new Text(label, 0, 0));
-	}
-
-	/**
 	 * Render session context to chat. Used for initial load and rebuild after compaction.
 	 * @param sessionContext Session context to render
 	 * @param options.updateFooter Update footer state
@@ -3174,7 +3050,6 @@ export class InteractiveMode {
 			// Assistant messages need special handling for tool calls
 			if (message.role === "assistant") {
 				this.addMessageToChat(message);
-				this.insertHistoryRoutingTag(message);
 				// Render tool call components
 				for (const content of message.content) {
 					if (content.type === "toolCall") {
