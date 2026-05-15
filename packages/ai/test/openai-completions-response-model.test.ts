@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getModel } from "../src/models.js";
 import { complete } from "../src/stream.js";
-import type { Model } from "../src/types.js";
 
-// Router/virtual ids (e.g. OpenRouter `auto`) keep `model` pinned to the
-// requested id and surface the routed concrete id on `responseModel`.
+// When the upstream echoes a different concrete model id than requested, we surface it on `responseModel`.
 
 const mockState = vi.hoisted(() => ({
 	chunks: [] as unknown[],
@@ -38,21 +37,6 @@ vi.mock("openai", () => {
 	return { default: FakeOpenAI };
 });
 
-function openRouterAuto(): Model<"openai-completions"> {
-	return {
-		id: "openrouter/auto",
-		name: "OpenRouter Auto",
-		api: "openai-completions",
-		provider: "openrouter",
-		baseUrl: "https://openrouter.ai/api/v1",
-		reasoning: false,
-		input: ["text"],
-		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-		contextWindow: 200_000,
-		maxTokens: 8192,
-	};
-}
-
 describe("openai-completions responseModel", () => {
 	beforeEach(() => {
 		mockState.chunks = [];
@@ -60,10 +44,14 @@ describe("openai-completions responseModel", () => {
 
 	it("surfaces routed chunk.model on responseModel without changing model", async () => {
 		mockState.chunks = [
-			{ id: "chatcmpl-1", model: "anthropic/claude-opus-4.7", choices: [{ index: 0, delta: { content: "hi" } }] },
 			{
 				id: "chatcmpl-1",
-				model: "anthropic/claude-opus-4.7",
+				model: "deepseek-v4-pro",
+				choices: [{ index: 0, delta: { content: "hi" } }],
+			},
+			{
+				id: "chatcmpl-1",
+				model: "deepseek-v4-pro",
 				choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
 				usage: {
 					prompt_tokens: 10,
@@ -74,24 +62,29 @@ describe("openai-completions responseModel", () => {
 			},
 		];
 
+		const model = getModel("deepseek", "deepseek-v4-flash");
 		const message = await complete(
-			openRouterAuto(),
+			model,
 			{ messages: [{ role: "user", content: "hi", timestamp: Date.now() }] },
 			{ apiKey: "test" },
 		);
 
-		expect(message.model).toBe("openrouter/auto");
-		expect(message.responseModel).toBe("anthropic/claude-opus-4.7");
-		expect(message.provider).toBe("openrouter");
+		expect(message.model).toBe("deepseek-v4-flash");
+		expect(message.responseModel).toBe("deepseek-v4-pro");
+		expect(message.provider).toBe("deepseek");
 		expect(message.stopReason).toBe("stop");
 	});
 
 	it("leaves responseModel undefined when chunks echo the requested id", async () => {
 		mockState.chunks = [
-			{ id: "chatcmpl-2", model: "openrouter/auto", choices: [{ index: 0, delta: { content: "hi" } }] },
 			{
 				id: "chatcmpl-2",
-				model: "openrouter/auto",
+				model: "deepseek-v4-flash",
+				choices: [{ index: 0, delta: { content: "hi" } }],
+			},
+			{
+				id: "chatcmpl-2",
+				model: "deepseek-v4-flash",
 				choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
 				usage: {
 					prompt_tokens: 1,
@@ -102,13 +95,14 @@ describe("openai-completions responseModel", () => {
 			},
 		];
 
+		const model = getModel("deepseek", "deepseek-v4-flash");
 		const message = await complete(
-			openRouterAuto(),
+			model,
 			{ messages: [{ role: "user", content: "hi", timestamp: Date.now() }] },
 			{ apiKey: "test" },
 		);
 
-		expect(message.model).toBe("openrouter/auto");
+		expect(message.model).toBe("deepseek-v4-flash");
 		expect(message.responseModel).toBeUndefined();
 	});
 
@@ -128,13 +122,14 @@ describe("openai-completions responseModel", () => {
 			},
 		];
 
+		const model = getModel("deepseek", "deepseek-v4-flash");
 		const message = await complete(
-			openRouterAuto(),
+			model,
 			{ messages: [{ role: "user", content: "hi", timestamp: Date.now() }] },
 			{ apiKey: "test" },
 		);
 
-		expect(message.model).toBe("openrouter/auto");
+		expect(message.model).toBe("deepseek-v4-flash");
 		expect(message.responseModel).toBeUndefined();
 	});
 });

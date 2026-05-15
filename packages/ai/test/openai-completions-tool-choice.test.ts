@@ -70,8 +70,7 @@ describe("openai-completions tool_choice", () => {
 	});
 
 	it("forwards toolChoice from simple options to payload", async () => {
-		const { compat: _compat, ...baseModel } = getModel("openai", "gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = getModel("deepseek", "deepseek-v4-flash")!;
 		const tools: Tool[] = [
 			{
 				name: "ping",
@@ -111,11 +110,10 @@ describe("openai-completions tool_choice", () => {
 	});
 
 	it("omits strict when compat disables strict mode", async () => {
-		const { compat: _compat, ...baseModel } = getModel("openai", "gpt-4o-mini")!;
+		const baseModel = getModel("deepseek", "deepseek-v4-flash")!;
 		const model = {
 			...baseModel,
-			api: "openai-completions",
-			compat: { supportsStrictMode: false },
+			compat: { ...baseModel.compat, supportsStrictMode: false },
 		} as const;
 		const tools: Tool[] = [
 			{
@@ -155,215 +153,6 @@ describe("openai-completions tool_choice", () => {
 		expect("strict" in (tool ?? {})).toBe(false);
 	});
 
-	it("maps groq qwen3 reasoning levels to default reasoning_effort", async () => {
-		const model = getModel("groq", "qwen/qwen3-32b")!;
-		let payload: unknown;
-
-		await streamSimple(
-			model,
-			{
-				messages: [
-					{
-						role: "user",
-						content: "Hi",
-						timestamp: Date.now(),
-					},
-				],
-			},
-			{
-				apiKey: "test",
-				reasoning: "medium",
-				onPayload: (params: unknown) => {
-					payload = params;
-				},
-			},
-		).result();
-
-		const params = (payload ?? mockState.lastParams) as { reasoning_effort?: string };
-		expect(params.reasoning_effort).toBe("default");
-	});
-
-	it("keeps normal reasoning_effort for groq models without compat mapping", async () => {
-		const model = getModel("groq", "openai/gpt-oss-20b")!;
-		let payload: unknown;
-
-		await streamSimple(
-			model,
-			{
-				messages: [
-					{
-						role: "user",
-						content: "Hi",
-						timestamp: Date.now(),
-					},
-				],
-			},
-			{
-				apiKey: "test",
-				reasoning: "medium",
-				onPayload: (params: unknown) => {
-					payload = params;
-				},
-			},
-		).result();
-
-		const params = (payload ?? mockState.lastParams) as { reasoning_effort?: string };
-		expect(params.reasoning_effort).toBe("medium");
-	});
-
-	it("enables tool_stream for supported z.ai models with tools", async () => {
-		const model = getModel("zai", "glm-5.1")!;
-		const tools: Tool[] = [
-			{
-				name: "ping",
-				description: "Ping tool",
-				parameters: Type.Object({
-					ok: Type.Boolean(),
-				}),
-			},
-		];
-		let payload: unknown;
-
-		await streamSimple(
-			model,
-			{
-				messages: [
-					{
-						role: "user",
-						content: "Call ping with ok=true",
-						timestamp: Date.now(),
-					},
-				],
-				tools,
-			},
-			{
-				apiKey: "test",
-				onPayload: (params: unknown) => {
-					payload = params;
-				},
-			},
-		).result();
-
-		const params = (payload ?? mockState.lastParams) as { tool_stream?: boolean };
-		expect(params.tool_stream).toBe(true);
-	});
-
-	it("stores z.ai tool_stream support in model compat metadata", () => {
-		expect(getModel("zai", "glm-5.1")?.compat?.zaiToolStream).toBe(true);
-		expect(getModel("zai", "glm-4.7")?.compat?.zaiToolStream).toBe(true);
-		expect(getModel("zai", "glm-4.7")?.compat?.zaiToolStream).toBe(true);
-		expect(getModel("zai", "glm-5-turbo")?.compat?.zaiToolStream).toBe(true);
-		expect(getModel("zai", "glm-4.5-air")?.compat?.zaiToolStream).toBeUndefined();
-	});
-
-	it("omits tool_stream for unsupported z.ai models", async () => {
-		const model = getModel("zai", "glm-4.5-air")!;
-		const tools: Tool[] = [
-			{
-				name: "ping",
-				description: "Ping tool",
-				parameters: Type.Object({
-					ok: Type.Boolean(),
-				}),
-			},
-		];
-		let payload: unknown;
-
-		await streamSimple(
-			model,
-			{
-				messages: [
-					{
-						role: "user",
-						content: "Call ping with ok=true",
-						timestamp: Date.now(),
-					},
-				],
-				tools,
-			},
-			{
-				apiKey: "test",
-				onPayload: (params: unknown) => {
-					payload = params;
-				},
-			},
-		).result();
-
-		const params = (payload ?? mockState.lastParams) as { tool_stream?: boolean };
-		expect(params.tool_stream).toBeUndefined();
-	});
-
-	it("respects explicit z.ai tool_stream compat override", async () => {
-		const baseModel = getModel("zai", "glm-4.5-air")!;
-		const model = {
-			...baseModel,
-			compat: {
-				...baseModel.compat,
-				zaiToolStream: true,
-			},
-		} as const;
-		const tools: Tool[] = [
-			{
-				name: "ping",
-				description: "Ping tool",
-				parameters: Type.Object({
-					ok: Type.Boolean(),
-				}),
-			},
-		];
-		let payload: unknown;
-
-		await streamSimple(
-			model,
-			{
-				messages: [
-					{
-						role: "user",
-						content: "Call ping with ok=true",
-						timestamp: Date.now(),
-					},
-				],
-				tools,
-			},
-			{
-				apiKey: "test",
-				onPayload: (params: unknown) => {
-					payload = params;
-				},
-			},
-		).result();
-
-		const params = (payload ?? mockState.lastParams) as { tool_stream?: boolean };
-		expect(params.tool_stream).toBe(true);
-	});
-
-	it("omits tool_stream when no tools are provided", async () => {
-		const model = getModel("zai", "glm-5.1")!;
-		let payload: unknown;
-
-		await streamSimple(
-			model,
-			{
-				messages: [
-					{
-						role: "user",
-						content: "Hi",
-						timestamp: Date.now(),
-					},
-				],
-			},
-			{
-				apiKey: "test",
-				onPayload: (params: unknown) => {
-					payload = params;
-				},
-			},
-		).result();
-
-		const params = (payload ?? mockState.lastParams) as { tool_stream?: boolean };
-		expect(params.tool_stream).toBeUndefined();
-	});
-
 	it("maps non-standard provider finish_reason values to stopReason error", async () => {
 		mockState.chunks = [
 			{
@@ -380,7 +169,7 @@ describe("openai-completions tool_choice", () => {
 			},
 		];
 
-		const model = getModel("zai", "glm-5.1")!;
+		const model = getModel("deepseek", "deepseek-v4-flash")!;
 		const response = await streamSimple(
 			model,
 			{
@@ -418,8 +207,7 @@ describe("openai-completions tool_choice", () => {
 			},
 		];
 
-		const { compat: _compat, ...baseModel } = getModel("openai", "gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = getModel("deepseek", "deepseek-v4-flash")!;
 		const response = await streamSimple(
 			model,
 			{
@@ -505,8 +293,7 @@ describe("openai-completions tool_choice", () => {
 			},
 		];
 
-		const { compat: _compat, ...baseModel } = getModel("openai", "gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = getModel("deepseek", "deepseek-v4-flash")!;
 		const tool: Tool = {
 			name: "read",
 			description: "Read a file",
@@ -566,8 +353,7 @@ describe("openai-completions tool_choice", () => {
 			},
 		];
 
-		const { compat: _compat, ...baseModel } = getModel("openai", "gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = getModel("deepseek", "deepseek-v4-flash")!;
 		const response = await streamSimple(
 			model,
 			{
@@ -605,8 +391,7 @@ describe("openai-completions tool_choice", () => {
 			},
 		];
 
-		const { compat: _compat, ...baseModel } = getModel("openai", "gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = getModel("deepseek", "deepseek-v4-flash")!;
 		const response = await streamSimple(
 			model,
 			{
@@ -650,8 +435,7 @@ describe("openai-completions tool_choice", () => {
 			},
 		];
 
-		const { compat: _compat, ...baseModel } = getModel("openai", "gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = getModel("deepseek", "deepseek-v4-flash")!;
 		const response = await streamSimple(
 			model,
 			{
@@ -672,8 +456,8 @@ describe("openai-completions tool_choice", () => {
 		expect(response.usage.totalTokens).toBe(105);
 	});
 
-	it("uses OpenRouter reasoning object instead of reasoning_effort", async () => {
-		const model = getModel("openrouter", "deepseek/deepseek-r1")!;
+	it("enables DeepSeek thinking payload when reasoning option is set", async () => {
+		const model = getModel("deepseek", "deepseek-v4-flash")!;
 		let payload: unknown;
 
 		await streamSimple(
@@ -697,10 +481,10 @@ describe("openai-completions tool_choice", () => {
 		).result();
 
 		const params = (payload ?? mockState.lastParams) as {
-			reasoning?: { effort?: string };
 			reasoning_effort?: string;
+			thinking?: { type?: string };
 		};
-		expect(params.reasoning).toEqual({ effort: "high" });
-		expect(params.reasoning_effort).toBeUndefined();
+		expect(params.thinking?.type).toBe("enabled");
+		expect(params.reasoning_effort).toBe("high");
 	});
 });

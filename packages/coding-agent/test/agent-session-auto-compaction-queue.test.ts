@@ -63,7 +63,7 @@ describe("AgentSession auto-compaction queue resume", () => {
 		mkdirSync(tempDir, { recursive: true });
 		vi.useFakeTimers();
 
-		const model = getModel("anthropic", "claude-sonnet-4-5")!;
+		const model = getModel("deepseek", "deepseek-v4-flash")!;
 		const agent = new Agent({
 			initialState: {
 				model,
@@ -75,7 +75,7 @@ describe("AgentSession auto-compaction queue resume", () => {
 		sessionManager = SessionManager.inMemory();
 		const settingsManager = SettingsManager.create(tempDir, tempDir);
 		const authStorage = AuthStorage.create(join(tempDir, "auth.json"));
-		authStorage.setRuntimeApiKey("anthropic", "test-key");
+		authStorage.setRuntimeApiKey("deepseek", "test-key");
 		const modelRegistry = ModelRegistry.create(authStorage, tempDir);
 
 		session = new AgentSession({

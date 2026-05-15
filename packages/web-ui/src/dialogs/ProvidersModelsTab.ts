@@ -1,6 +1,5 @@
 import { i18n } from "@mariozechner/mini-lit";
 import { Select } from "@mariozechner/mini-lit/dist/Select.js";
-import { getProviders } from "@mariozechner/pi-ai";
 import { html, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "../components/CustomProviderCard.js";
@@ -35,11 +34,7 @@ export class ProvidersModelsTab extends SettingsTab {
 
 			// Check status for auto-discovery providers
 			for (const provider of this.customProviders) {
-				const isAutoDiscovery =
-					provider.type === "ollama" ||
-					provider.type === "llama.cpp" ||
-					provider.type === "vllm" ||
-					provider.type === "lmstudio";
+				const isAutoDiscovery = provider.type === "ollama" || provider.type === "lmstudio";
 				if (isAutoDiscovery) {
 					this.checkProviderStatus(provider);
 				}
@@ -72,26 +67,28 @@ export class ProvidersModelsTab extends SettingsTab {
 	}
 
 	private renderKnownProviders(): TemplateResult {
-		const providers = getProviders();
+		const cloudProviders = ["deepseek"] as const;
 
 		return html`
 			<div class="flex flex-col gap-6">
 				<div>
-					<h3 class="text-sm font-semibold text-foreground mb-2">Cloud Providers</h3>
+					<h3 class="text-sm font-semibold text-foreground mb-2">DeepSeek (cloud)</h3>
 					<p class="text-sm text-muted-foreground mb-4">
-						Cloud LLM providers with predefined models. API keys are stored locally in your browser.
+						API keys are stored locally in your browser. Use custom providers below for Ollama, LM Studio, or
+						other OpenAI-compatible endpoints running DeepSeek-class models.
 					</p>
 				</div>
 				<div class="flex flex-col gap-6">
-					${providers.map((provider) => html` <provider-key-input .provider=${provider}></provider-key-input> `)}
+					${cloudProviders.map(
+						(provider) => html` <provider-key-input .provider=${provider}></provider-key-input> `,
+					)}
 				</div>
 			</div>
 		`;
 	}
 
 	private renderCustomProviders(): TemplateResult {
-		const isAutoDiscovery = (type: string) =>
-			type === "ollama" || type === "llama.cpp" || type === "vllm" || type === "lmstudio";
+		const isAutoDiscovery = (type: string) => type === "ollama" || type === "lmstudio";
 
 		return html`
 			<div class="flex flex-col gap-6">
@@ -106,12 +103,8 @@ export class ProvidersModelsTab extends SettingsTab {
 						placeholder: i18n("Add Provider"),
 						options: [
 							{ value: "ollama", label: "Ollama" },
-							{ value: "llama.cpp", label: "llama.cpp" },
-							{ value: "vllm", label: "vLLM" },
 							{ value: "lmstudio", label: "LM Studio" },
 							{ value: "openai-completions", label: i18n("OpenAI Completions Compatible") },
-							{ value: "openai-responses", label: i18n("OpenAI Responses Compatible") },
-							{ value: "anthropic-messages", label: i18n("Anthropic Messages Compatible") },
 						],
 						onChange: (value: string) => this.addCustomProvider(value as CustomProviderType),
 						variant: "outline",

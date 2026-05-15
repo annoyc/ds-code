@@ -15,8 +15,8 @@ describe("SessionManager.saveCustomEntry", () => {
 		const msg2Id = session.appendMessage({
 			role: "assistant",
 			content: [{ type: "text", text: "hi" }],
-			api: "anthropic-messages",
-			provider: "anthropic",
+			api: "openai-completions",
+			provider: "deepseek",
 			model: "test",
 			usage: {
 				input: 1,

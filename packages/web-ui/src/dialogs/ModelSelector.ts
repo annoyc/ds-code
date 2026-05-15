@@ -3,7 +3,7 @@ import { Badge } from "@mariozechner/mini-lit/dist/Badge.js";
 import { Button } from "@mariozechner/mini-lit/dist/Button.js";
 import { DialogHeader } from "@mariozechner/mini-lit/dist/Dialog.js";
 import { DialogBase } from "@mariozechner/mini-lit/dist/DialogBase.js";
-import { getModels, getProviders, type Model, modelsAreEqual } from "@mariozechner/pi-ai";
+import { getModels, type Model, modelsAreEqual } from "@mariozechner/pi-ai";
 import { html, type PropertyValues, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { createRef, ref } from "lit/directives/ref.js";
@@ -148,11 +148,7 @@ export class ModelSelector extends DialogBase {
 
 			// Load models from custom providers
 			for (const provider of customProviders) {
-				const isAutoDiscovery: boolean =
-					provider.type === "ollama" ||
-					provider.type === "llama.cpp" ||
-					provider.type === "vllm" ||
-					provider.type === "lmstudio";
+				const isAutoDiscovery: boolean = provider.type === "ollama" || provider.type === "lmstudio";
 
 				if (isAutoDiscovery) {
 					try {
@@ -201,10 +197,10 @@ export class ModelSelector extends DialogBase {
 	private getFilteredModels(): Array<{ provider: string; id: string; model: any }> {
 		// Collect all models from known providers
 		const allModels: Array<{ provider: string; id: string; model: any }> = [];
-		const knownProviders = getProviders();
+		const knownProviders = ["deepseek"] as const;
 
 		for (const provider of knownProviders) {
-			const models = getModels(provider as any);
+			const models = getModels(provider);
 			for (const model of models) {
 				allModels.push({ provider, id: model.id, model });
 			}

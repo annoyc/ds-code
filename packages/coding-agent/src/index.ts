@@ -22,7 +22,6 @@ export {
 	type AuthStorageBackend,
 	FileAuthStorageBackend,
 	InMemoryAuthStorageBackend,
-	type OAuthCredential,
 } from "./core/auth-storage.js";
 // Compaction
 export {

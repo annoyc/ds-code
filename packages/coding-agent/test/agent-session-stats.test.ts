@@ -8,7 +8,7 @@ import { SessionManager } from "../src/core/session-manager.js";
 import { SettingsManager } from "../src/core/settings-manager.js";
 import { createTestResourceLoader } from "./utilities.js";
 
-const model = getModel("anthropic", "claude-sonnet-4-5")!;
+const model = getModel("deepseek", "deepseek-v4-flash")!;
 
 function createUsage(totalTokens: number): Usage {
 	return {
@@ -52,7 +52,7 @@ function createSession() {
 	const settingsManager = SettingsManager.inMemory();
 	const sessionManager = SessionManager.inMemory();
 	const authStorage = AuthStorage.inMemory();
-	authStorage.setRuntimeApiKey("anthropic", "test-key");
+	authStorage.setRuntimeApiKey("deepseek", "test-key");
 	const session = new AgentSession({
 		agent: new Agent({
 			getApiKey: () => "test-key",

@@ -13,7 +13,7 @@ const MIGRATION_GUIDE_URL =
 const EXTENSIONS_DOC_URL = "https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/extensions.md";
 
 /**
- * Migrate legacy oauth.json and settings.json apiKeys to auth.json.
+ * Migrate legacy oauth.json (retired) and settings.json apiKeys to auth.json.
  *
  * @returns Array of provider names that were migrated
  */
@@ -29,14 +29,9 @@ export function migrateAuthToAuthJson(): string[] {
 	const migrated: Record<string, unknown> = {};
 	const providers: string[] = [];
 
-	// Migrate oauth.json
+	// Retire oauth.json without importing OAuth credentials (API-key-only auth).
 	if (existsSync(oauthPath)) {
 		try {
-			const oauth = JSON.parse(readFileSync(oauthPath, "utf-8"));
-			for (const [provider, cred] of Object.entries(oauth)) {
-				migrated[provider] = { type: "oauth", ...(cred as object) };
-				providers.push(provider);
-			}
 			renameSync(oauthPath, `${oauthPath}.migrated`);
 		} catch {
 			// Skip on error

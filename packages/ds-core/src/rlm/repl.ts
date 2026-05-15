@@ -58,7 +58,9 @@ export class RlmRepl {
 	async runTurn(content: string, prompt: string): Promise<string> {
 		const proc = this.process;
 		if (!proc?.stdin || !proc.stdout) {
-			throw new Error("RLM Python runtime is not configured: set RLM_PYTHON_SCRIPT to the entry module path (TODO)");
+			throw new Error(
+				"RLM Python runtime is not configured. Set the RLM_PYTHON_SCRIPT environment variable to the entry module path.",
+			);
 		}
 		const stderrChunks: Buffer[] = [];
 		proc.stderr?.on("data", (c: Buffer | string) => stderrChunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));

@@ -9,13 +9,7 @@ const tsxLoader = require.resolve("tsx/esm");
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const aiEntryUrl = new URL("../src/index.ts", import.meta.url).href;
 
-const SDK_SPECIFIERS = [
-	"@anthropic-ai/sdk",
-	"openai",
-	"@google/genai",
-	"@mistralai/mistralai",
-	"@aws-sdk/client-bedrock-runtime",
-] as const;
+const SDK_SPECIFIERS = ["openai"] as const;
 
 type ProbeResult = {
 	loadedSpecifiers: string[];
@@ -69,34 +63,34 @@ describe("lazy provider module loading", () => {
 		expect(result.loadedSpecifiers).toEqual([]);
 	});
 
-	it("loads only the Anthropic SDK when calling the root lazy wrapper", () => {
+	it("loads only the OpenAI SDK when calling the root lazy wrapper", () => {
 		const result = runProbe(`
 			const model = {
-				id: "claude-sonnet-4-6",
-				name: "Claude Sonnet 4",
-				api: "anthropic-messages",
-				provider: "anthropic",
-				baseUrl: "https://api.anthropic.com",
+				id: "deepseek-v4-flash",
+				name: "DeepSeek V4 Flash",
+				api: "openai-completions",
+				provider: "deepseek",
+				baseUrl: "https://api.deepseek.com",
 				reasoning: true,
 				input: ["text"],
 				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-				contextWindow: 200000,
+				contextWindow: 1000000,
 				maxTokens: 8192,
 			};
 			const context = { messages: [{ role: "user", content: "hi" }] };
-			await mod.streamSimpleAnthropic(model, context).result();
+			await mod.streamSimpleOpenAICompletions(model, context).result();
 		`);
 
-		expect(result.loadedSpecifiers).toEqual(["@anthropic-ai/sdk"]);
+		expect(result.loadedSpecifiers).toEqual(["openai"]);
 	});
 
-	it("loads only the Anthropic SDK when dispatching through streamSimple", () => {
+	it("loads only the OpenAI SDK when dispatching through streamSimple", () => {
 		const result = runProbe(`
-			const model = mod.getModel("anthropic", "claude-sonnet-4-6");
+			const model = mod.getModel("deepseek", "deepseek-v4-flash");
 			const context = { messages: [{ role: "user", content: "hi" }] };
 			await mod.streamSimple(model, context).result();
 		`);
 
-		expect(result.loadedSpecifiers).toEqual(["@anthropic-ai/sdk"]);
+		expect(result.loadedSpecifiers).toEqual(["openai"]);
 	});
 });

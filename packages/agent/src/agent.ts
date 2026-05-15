@@ -494,6 +494,10 @@ export class Agent {
 	 */
 	private async processEvents(event: AgentEvent): Promise<void> {
 		switch (event.type) {
+			case "agent_error":
+				this._state.errorMessage = event.message;
+				break;
+
 			case "message_start":
 				this._state.streamingMessage = event.message;
 				break;

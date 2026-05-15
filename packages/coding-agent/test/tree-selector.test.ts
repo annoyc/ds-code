@@ -40,8 +40,8 @@ function assistantMessage(id: string, parentId: string | null, text: string): Se
 		message: {
 			role: "assistant",
 			content: [{ type: "text", text }],
-			api: "anthropic-messages",
-			provider: "anthropic",
+			api: "openai-completions",
+			provider: "deepseek",
 			model: "claude-sonnet-4",
 			usage: {
 				input: 0,
@@ -67,8 +67,8 @@ function toolCallOnlyAssistant(id: string, parentId: string | null): SessionMess
 		message: {
 			role: "assistant",
 			content: [{ type: "toolCall", id: `tc-${id}`, name: "read", arguments: { path: "test.ts" } }],
-			api: "anthropic-messages",
-			provider: "anthropic",
+			api: "openai-completions",
+			provider: "deepseek",
 			model: "claude-sonnet-4",
 			usage: {
 				input: 0,
@@ -91,7 +91,7 @@ function modelChange(id: string, parentId: string | null): ModelChangeEntry {
 		id,
 		parentId,
 		timestamp: new Date().toISOString(),
-		provider: "anthropic",
+		provider: "deepseek",
 		modelId: "claude-sonnet-4",
 	};
 }

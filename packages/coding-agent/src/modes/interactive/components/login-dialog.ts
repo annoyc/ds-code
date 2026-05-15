@@ -1,4 +1,3 @@
-import { getOAuthProviders } from "@mariozechner/pi-ai/oauth";
 import { Container, type Focusable, getKeybindings, Input, Spacer, Text, type TUI } from "@mariozechner/pi-tui";
 import { exec } from "child_process";
 import { theme } from "../theme/theme.js";
@@ -6,7 +5,7 @@ import { DynamicBorder } from "./dynamic-border.js";
 import { keyHint } from "./keybinding-hints.js";
 
 /**
- * Login dialog component - replaces editor during OAuth login flow
+ * Dialog component used during API key entry (replaces editor temporarily).
  */
 export class LoginDialogComponent extends Container implements Focusable {
 	private contentContainer: Container;
@@ -36,8 +35,7 @@ export class LoginDialogComponent extends Container implements Focusable {
 		super();
 		this.tui = tui;
 
-		const providerInfo = getOAuthProviders().find((p) => p.id === providerId);
-		const providerName = providerNameOverride || providerInfo?.name || providerId;
+		const providerName = providerNameOverride || providerId;
 		const title = titleOverride ?? `Login to ${providerName}`;
 
 		// Top border

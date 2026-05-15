@@ -1,9 +1,10 @@
 import { LMStudioClient } from "@lmstudio/sdk";
 import type { Model } from "@mariozechner/pi-ai";
 import { Ollama } from "ollama/browser";
+import type { AutoDiscoveryProviderType } from "../storage/stores/custom-providers-store.js";
 
 /**
- * Discover models from an Ollama server.
+ * Discover models from an Ollama server (e.g. local DeepSeek weights).
  * @param baseUrl - Base URL of the Ollama server (e.g., "http://localhost:11434")
  * @param apiKey - Optional API key (currently unused by Ollama)
  * @returns Array of discovered models
@@ -77,131 +78,7 @@ export async function discoverOllamaModels(baseUrl: string, _apiKey?: string): P
 }
 
 /**
- * Discover models from a llama.cpp server via OpenAI-compatible /v1/models endpoint.
- * @param baseUrl - Base URL of the llama.cpp server (e.g., "http://localhost:8080")
- * @param apiKey - Optional API key
- * @returns Array of discovered models
- */
-export async function discoverLlamaCppModels(baseUrl: string, apiKey?: string): Promise<Model<any>[]> {
-	try {
-		const headers: HeadersInit = {
-			"Content-Type": "application/json",
-		};
-
-		if (apiKey) {
-			headers.Authorization = `Bearer ${apiKey}`;
-		}
-
-		const response = await fetch(`${baseUrl}/v1/models`, {
-			method: "GET",
-			headers,
-		});
-
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-		}
-
-		const data = await response.json();
-
-		if (!data.data || !Array.isArray(data.data)) {
-			throw new Error("Invalid response format from llama.cpp server");
-		}
-
-		return data.data.map((model: any) => {
-			// llama.cpp doesn't always provide context window info
-			const contextWindow = model.context_length || 8192;
-			const maxTokens = model.max_tokens || 4096;
-
-			const llamaModel: Model<any> = {
-				id: model.id,
-				name: model.id,
-				api: "openai-completions" as any,
-				provider: "", // Will be set by caller
-				baseUrl: `${baseUrl}/v1`,
-				reasoning: false,
-				input: ["text"],
-				cost: {
-					input: 0,
-					output: 0,
-					cacheRead: 0,
-					cacheWrite: 0,
-				},
-				contextWindow: contextWindow,
-				maxTokens: maxTokens,
-			};
-
-			return llamaModel;
-		});
-	} catch (err) {
-		console.error("Failed to discover llama.cpp models:", err);
-		throw new Error(`llama.cpp discovery failed: ${err instanceof Error ? err.message : String(err)}`);
-	}
-}
-
-/**
- * Discover models from a vLLM server via OpenAI-compatible /v1/models endpoint.
- * @param baseUrl - Base URL of the vLLM server (e.g., "http://localhost:8000")
- * @param apiKey - Optional API key
- * @returns Array of discovered models
- */
-export async function discoverVLLMModels(baseUrl: string, apiKey?: string): Promise<Model<any>[]> {
-	try {
-		const headers: HeadersInit = {
-			"Content-Type": "application/json",
-		};
-
-		if (apiKey) {
-			headers.Authorization = `Bearer ${apiKey}`;
-		}
-
-		const response = await fetch(`${baseUrl}/v1/models`, {
-			method: "GET",
-			headers,
-		});
-
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-		}
-
-		const data = await response.json();
-
-		if (!data.data || !Array.isArray(data.data)) {
-			throw new Error("Invalid response format from vLLM server");
-		}
-
-		return data.data.map((model: any) => {
-			// vLLM provides max_model_len which is the context window
-			const contextWindow = model.max_model_len || 8192;
-			const maxTokens = Math.min(contextWindow, 4096); // Cap max tokens
-
-			const vllmModel: Model<any> = {
-				id: model.id,
-				name: model.id,
-				api: "openai-completions" as any,
-				provider: "", // Will be set by caller
-				baseUrl: `${baseUrl}/v1`,
-				reasoning: false,
-				input: ["text"],
-				cost: {
-					input: 0,
-					output: 0,
-					cacheRead: 0,
-					cacheWrite: 0,
-				},
-				contextWindow: contextWindow,
-				maxTokens: maxTokens,
-			};
-
-			return vllmModel;
-		});
-	} catch (err) {
-		console.error("Failed to discover vLLM models:", err);
-		throw new Error(`vLLM discovery failed: ${err instanceof Error ? err.message : String(err)}`);
-	}
-}
-
-/**
- * Discover models from an LM Studio server using the LM Studio SDK.
+ * Discover models from an LM Studio server using the LM Studio SDK (OpenAI-compatible /v1).
  * @param baseUrl - Base URL of the LM Studio server (e.g., "http://localhost:1234")
  * @param apiKey - Optional API key (unused for LM Studio SDK)
  * @returns Array of discovered models
@@ -253,24 +130,16 @@ export async function discoverLMStudioModels(baseUrl: string, _apiKey?: string):
 }
 
 /**
- * Convenience function to discover models based on provider type.
- * @param type - Provider type
- * @param baseUrl - Base URL of the server
- * @param apiKey - Optional API key
- * @returns Array of discovered models
+ * Discover models for local OpenAI-compatible runners used with DeepSeek-family models.
  */
 export async function discoverModels(
-	type: "ollama" | "llama.cpp" | "vllm" | "lmstudio",
+	type: AutoDiscoveryProviderType,
 	baseUrl: string,
 	apiKey?: string,
 ): Promise<Model<any>[]> {
 	switch (type) {
 		case "ollama":
 			return discoverOllamaModels(baseUrl, apiKey);
-		case "llama.cpp":
-			return discoverLlamaCppModels(baseUrl, apiKey);
-		case "vllm":
-			return discoverVLLMModels(baseUrl, apiKey);
 		case "lmstudio":
 			return discoverLMStudioModels(baseUrl, apiKey);
 	}

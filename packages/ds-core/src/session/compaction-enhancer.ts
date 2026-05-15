@@ -1,11 +1,9 @@
 export interface CacheAwareCompactionOptions {
 	cacheHitThreshold: number;
-	maxSummaryTokens: number;
 }
 
 const DEFAULT_OPTIONS: CacheAwareCompactionOptions = {
 	cacheHitThreshold: 0.5,
-	maxSummaryTokens: 2048,
 };
 
 interface CompactionEvent {

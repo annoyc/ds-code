@@ -260,7 +260,7 @@ export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhi
  *
  * @example
  * ```typescript
- * declare module "@mariozechner/agent" {
+ * declare module "@mariozechner/pi-agent-core" {
  *   interface CustomAgentMessages {
  *     artifact: ArtifactMessage;
  *     notification: NotificationMessage;
@@ -367,6 +367,10 @@ export interface AgentContext {
 /**
  * Events emitted by the Agent for UI updates.
  *
+ * For normal completion, `agent_end` is the last loop event. If `agentLoop()` or
+ * `agentLoopContinue()` reject before that, the `EventStream` may emit `agent_error`
+ * and close with an empty message array instead of `agent_end`.
+ *
  * `agent_end` is the last event emitted for a run, but awaited `Agent.subscribe()`
  * listeners for that event are still part of run settlement. The agent becomes
  * idle only after those listeners finish.
@@ -374,6 +378,7 @@ export interface AgentContext {
 export type AgentEvent =
 	// Agent lifecycle
 	| { type: "agent_start" }
+	| { type: "agent_error"; message: string }
 	| { type: "agent_end"; messages: AgentMessage[] }
 	// Turn lifecycle - a turn is one assistant response + any tool calls/results
 	| { type: "turn_start" }

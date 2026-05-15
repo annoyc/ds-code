@@ -46,9 +46,14 @@ export function agentLoop(
 		},
 		signal,
 		streamFn,
-	).then((messages) => {
-		stream.end(messages);
-	});
+	)
+		.then((messages) => {
+			stream.end(messages);
+		})
+		.catch((error: unknown) => {
+			stream.push({ type: "agent_error", message: formatAgentLoopError(error) });
+			stream.end([]);
+		});
 
 	return stream;
 }
@@ -85,9 +90,14 @@ export function agentLoopContinue(
 		},
 		signal,
 		streamFn,
-	).then((messages) => {
-		stream.end(messages);
-	});
+	)
+		.then((messages) => {
+			stream.end(messages);
+		})
+		.catch((error: unknown) => {
+			stream.push({ type: "agent_error", message: formatAgentLoopError(error) });
+			stream.end([]);
+		});
 
 	return stream;
 }
@@ -147,6 +157,10 @@ function createAgentStream(): EventStream<AgentEvent, AgentMessage[]> {
 		(event: AgentEvent) => event.type === "agent_end",
 		(event: AgentEvent) => (event.type === "agent_end" ? event.messages : []),
 	);
+}
+
+function formatAgentLoopError(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
 }
 
 /**

@@ -8,7 +8,7 @@ import { OAuthSelectorComponent } from "../src/modes/interactive/components/oaut
 import { isApiKeyLoginProvider } from "../src/modes/interactive/interactive-mode.js";
 import { initTheme } from "../src/modes/interactive/theme/theme.js";
 
-const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
+const originalDeepseekApiKey = process.env.DEEPSEEK_API_KEY;
 
 describe("OAuthSelectorComponent", () => {
 	beforeAll(() => {
@@ -20,64 +20,55 @@ describe("OAuthSelectorComponent", () => {
 	});
 
 	afterEach(() => {
-		if (originalOpenAiApiKey === undefined) {
-			delete process.env.OPENAI_API_KEY;
+		if (originalDeepseekApiKey === undefined) {
+			delete process.env.DEEPSEEK_API_KEY;
 		} else {
-			process.env.OPENAI_API_KEY = originalOpenAiApiKey;
+			process.env.DEEPSEEK_API_KEY = originalDeepseekApiKey;
 		}
 	});
 
-	it("keeps built-in API key providers separate from OAuth-only providers", () => {
-		const oauthProviderIds = new Set(["anthropic", "github-copilot", "custom-oauth"]);
-		const builtInProviderIds = new Set(["anthropic", "github-copilot", "amazon-bedrock", "openai"]);
-
-		expect(isApiKeyLoginProvider("anthropic", oauthProviderIds, builtInProviderIds)).toBe(true);
-		expect(BUILT_IN_PROVIDER_DISPLAY_NAMES.anthropic).toBe("Anthropic");
-		expect(isApiKeyLoginProvider("openai", oauthProviderIds, builtInProviderIds)).toBe(true);
-		expect(isApiKeyLoginProvider("github-copilot", oauthProviderIds, builtInProviderIds)).toBe(false);
-		expect(isApiKeyLoginProvider("amazon-bedrock", oauthProviderIds, builtInProviderIds)).toBe(true);
-		expect(isApiKeyLoginProvider("custom-oauth", oauthProviderIds, builtInProviderIds)).toBe(false);
-		expect(isApiKeyLoginProvider("custom-api", oauthProviderIds, builtInProviderIds)).toBe(true);
+	it("treats built-in providers as API-key login providers", () => {
+		expect(isApiKeyLoginProvider("deepseek")).toBe(true);
+		expect(BUILT_IN_PROVIDER_DISPLAY_NAMES.deepseek).toBe("DeepSeek");
 	});
 
-	it("shows stored OAuth auth distinctly in the API key selector", () => {
+	it("treats unknown custom providers as API-key login providers", () => {
+		expect(isApiKeyLoginProvider("custom-proxy")).toBe(true);
+	});
+
+	it("shows stored API key auth as configured", () => {
 		const authStorage = AuthStorage.inMemory({
-			anthropic: {
-				type: "oauth",
-				access: "access-token",
-				refresh: "refresh-token",
-				expires: Date.now() + 60_000,
-			},
+			deepseek: { type: "api_key", key: "sk-test-key" },
 		});
 		const selector = new OAuthSelectorComponent(
 			"login",
 			authStorage,
-			[{ id: "anthropic", name: "Anthropic", authType: "api_key" }],
+			[{ id: "deepseek", name: "DeepSeek", authType: "api_key" }],
 			() => {},
 			() => {},
 		);
 
 		const output = stripAnsi(selector.render(120).join("\n"));
 
-		expect(output).toContain("Anthropic");
-		expect(output).toContain("subscription configured");
+		expect(output).toContain("DeepSeek");
+		expect(output).toContain("configured");
 	});
 
 	it("shows environment API key auth as configured", () => {
-		process.env.OPENAI_API_KEY = "test-openai-key";
+		process.env.DEEPSEEK_API_KEY = "test-deepseek-key";
 		const authStorage = AuthStorage.inMemory();
 		const selector = new OAuthSelectorComponent(
 			"login",
 			authStorage,
-			[{ id: "openai", name: "OpenAI", authType: "api_key" }],
+			[{ id: "deepseek", name: "DeepSeek", authType: "api_key" }],
 			() => {},
 			() => {},
 		);
 
 		const output = stripAnsi(selector.render(120).join("\n"));
 
-		expect(output).toContain("OpenAI");
-		expect(output).toContain("✓ env: OPENAI_API_KEY");
+		expect(output).toContain("DeepSeek");
+		expect(output).toContain("✓ env: DEEPSEEK_API_KEY");
 		expect(output).not.toContain("unconfigured");
 	});
 

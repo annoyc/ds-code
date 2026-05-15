@@ -8,18 +8,8 @@ import { getAppStorage } from "../storage/app-storage.js";
 import { applyProxyIfNeeded } from "../utils/proxy-utils.js";
 import { Input } from "./Input.js";
 
-// Test models for each provider
-const TEST_MODELS: Record<string, string> = {
-	anthropic: "claude-haiku-4-5",
-	openai: "gpt-4o-mini",
-	google: "gemini-2.5-flash",
-	groq: "openai/gpt-oss-20b",
-	openrouter: "z-ai/glm-4.6",
-	"vercel-ai-gateway": "anthropic/claude-opus-4.5",
-	cerebras: "gpt-oss-120b",
-	xai: "grok-4-fast-non-reasoning",
-	zai: "glm-4.5-air",
-};
+// Model used to validate the DeepSeek API key via a minimal completion.
+const DEEPSEEK_KEY_TEST_MODEL = "deepseek-v4-flash";
 
 @customElement("provider-key-input")
 export class ProviderKeyInput extends LitElement {
@@ -50,8 +40,8 @@ export class ProviderKeyInput extends LitElement {
 
 	private async testApiKey(provider: string, apiKey: string): Promise<boolean> {
 		try {
-			const modelId = TEST_MODELS[provider];
-			// Returning true here for Ollama and friends. Can' know which model to use for testing
+			const modelId = provider === "deepseek" ? DEEPSEEK_KEY_TEST_MODEL : undefined;
+			// Local / custom servers do not use this component for key testing.
 			if (!modelId) return true;
 
 			let model = getModel(provider as any, modelId);

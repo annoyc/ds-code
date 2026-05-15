@@ -45,10 +45,10 @@ describe.skipIf(!API_KEY)("AgentSession forking", () => {
 	});
 
 	async function createSession(noSession: boolean = false) {
-		const model = getModel("anthropic", "claude-sonnet-4-5")!;
+		const model = getModel("deepseek", "deepseek-v4-flash")!;
 		sessionManager = noSession ? SessionManager.inMemory(tempDir) : SessionManager.create(tempDir);
 		const authStorage = AuthStorage.create(join(tempDir, "auth.json"));
-		authStorage.setRuntimeApiKey("anthropic", API_KEY!);
+		authStorage.setRuntimeApiKey("deepseek", API_KEY!);
 
 		const servicesOptions = {
 			agentDir: tempDir,

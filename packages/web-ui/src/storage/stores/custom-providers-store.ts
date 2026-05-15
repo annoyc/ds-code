@@ -2,13 +2,11 @@ import type { Model } from "@mariozechner/pi-ai";
 import { Store } from "../store.js";
 import type { StoreConfig } from "../types.js";
 
-export type AutoDiscoveryProviderType = "ollama" | "llama.cpp" | "vllm" | "lmstudio";
+export type AutoDiscoveryProviderType = "ollama" | "lmstudio";
 
 export type CustomProviderType =
 	| AutoDiscoveryProviderType // Auto-discovery - models fetched on-demand
-	| "openai-completions" // Manual models - stored in provider.models
-	| "openai-responses" // Manual models - stored in provider.models
-	| "anthropic-messages"; // Manual models - stored in provider.models
+	| "openai-completions"; // Manual models - stored in provider.models (OpenAI-compatible, e.g. DeepSeek-compatible gateways)
 
 export interface CustomProvider {
 	id: string; // UUID

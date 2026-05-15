@@ -2,11 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getModel } from "../src/models.js";
 import { streamSimple } from "../src/stream.js";
 
-// Empty tools arrays must NOT be serialized as `tools: []` — some OpenAI-compatible
-// backends (e.g. DashScope / Aliyun Qwen via compatible-mode) reject the request with
-// `"[] is too short - 'tools'"` (HTTP 400) when `--no-tools` produces an empty array.
-// Regression for https://github.com/badlogic/pi-mono/issues/<issue-number>
-
 const mockState = vi.hoisted(() => ({
 	lastParams: undefined as unknown,
 	lastClientOptions: undefined as unknown,
@@ -61,8 +56,8 @@ describe("openai-completions empty tools handling", () => {
 	});
 
 	it("omits tools field when context.tools is an empty array", async () => {
-		const { compat: _compat, ...baseModel } = getModel("openai", "gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const baseModel = getModel("deepseek", "deepseek-v4-flash")!;
+		const model = { ...baseModel, api: "openai-completions" as const };
 
 		await streamSimple(
 			model,
@@ -78,8 +73,8 @@ describe("openai-completions empty tools handling", () => {
 	});
 
 	it("omits tools field when context.tools is undefined", async () => {
-		const { compat: _compat, ...baseModel } = getModel("openai", "gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const baseModel = getModel("deepseek", "deepseek-v4-flash")!;
+		const model = { ...baseModel, api: "openai-completions" as const };
 
 		await streamSimple(
 			model,
@@ -93,82 +88,9 @@ describe("openai-completions empty tools handling", () => {
 		expect("tools" in (params as object)).toBe(false);
 	});
 
-	it("uses conservative OpenAI-compatible fields for Cloudflare AI Gateway /compat models", async () => {
-		process.env.CLOUDFLARE_ACCOUNT_ID = "account-id";
-		process.env.CLOUDFLARE_GATEWAY_ID = "gateway-id";
-		const model = getModel("cloudflare-ai-gateway", "workers-ai/@cf/moonshotai/kimi-k2.6")!;
-
-		await streamSimple(
-			model,
-			{
-				systemPrompt: "You are helpful.",
-				messages: [{ role: "user", content: "hi", timestamp: Date.now() }],
-			},
-			{ apiKey: "test", reasoning: "high" },
-		).result();
-
-		const params = mockState.lastParams as {
-			messages: Array<{ role: string }>;
-			max_tokens?: number;
-			max_completion_tokens?: number;
-			reasoning_effort?: string;
-			store?: boolean;
-		};
-		expect(params.messages[0].role).toBe("system");
-		expect(params.max_tokens).toBeDefined();
-		expect(params.max_completion_tokens).toBeUndefined();
-		expect(params.reasoning_effort).toBeUndefined();
-		expect(params.store).toBeUndefined();
-
-		const clientOptions = mockState.lastClientOptions as {
-			baseURL?: string;
-			defaultHeaders?: Record<string, unknown>;
-		};
-		expect(clientOptions.baseURL).toBe("https://gateway.ai.cloudflare.com/v1/account-id/gateway-id/compat");
-		expect(clientOptions.defaultHeaders?.Authorization).toBeNull();
-		expect(clientOptions.defaultHeaders?.["cf-aig-authorization"]).toBe("Bearer test");
-	});
-
-	it("preserves inline upstream Authorization for Cloudflare AI Gateway BYOK requests", async () => {
-		process.env.CLOUDFLARE_ACCOUNT_ID = "account-id";
-		process.env.CLOUDFLARE_GATEWAY_ID = "gateway-id";
-		const model = getModel("cloudflare-ai-gateway", "gpt-5.1")!;
-
-		await streamSimple(
-			model,
-			{
-				messages: [{ role: "user", content: "hi", timestamp: Date.now() }],
-			},
-			{ apiKey: "cf-token", headers: { Authorization: "Bearer upstream-token" } },
-		).result();
-
-		const clientOptions = mockState.lastClientOptions as { defaultHeaders?: Record<string, unknown> };
-		expect(clientOptions.defaultHeaders?.Authorization).toBe("Bearer upstream-token");
-		expect(clientOptions.defaultHeaders?.["cf-aig-authorization"]).toBe("Bearer cf-token");
-	});
-
-	it("sends session affinity headers for Workers AI through Cloudflare AI Gateway", async () => {
-		process.env.CLOUDFLARE_ACCOUNT_ID = "account-id";
-		process.env.CLOUDFLARE_GATEWAY_ID = "gateway-id";
-		const workersModel = getModel("cloudflare-ai-gateway", "workers-ai/@cf/moonshotai/kimi-k2.6")!;
-
-		await streamSimple(
-			workersModel,
-			{
-				messages: [{ role: "user", content: "hi", timestamp: Date.now() }],
-			},
-			{ apiKey: "test", sessionId: "session-1" },
-		).result();
-
-		const clientOptions = mockState.lastClientOptions as { defaultHeaders?: Record<string, string> };
-		expect(clientOptions.defaultHeaders?.session_id).toBe("session-1");
-		expect(clientOptions.defaultHeaders?.["x-client-request-id"]).toBe("session-1");
-		expect(clientOptions.defaultHeaders?.["x-session-affinity"]).toBe("session-1");
-	});
-
 	it("still emits tools: [] for Anthropic/LiteLLM proxy when conversation has tool history", async () => {
-		const { compat: _compat, ...baseModel } = getModel("openai", "gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const baseModel = getModel("deepseek", "deepseek-v4-flash")!;
+		const model = { ...baseModel, api: "openai-completions" as const };
 
 		await streamSimple(
 			model,
@@ -195,8 +117,8 @@ describe("openai-completions empty tools handling", () => {
 							cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 						},
 						api: "openai-completions",
-						provider: "openai",
-						model: "gpt-4o-mini",
+						provider: "deepseek",
+						model: "deepseek-v4-flash",
 						timestamp: Date.now(),
 					},
 					{

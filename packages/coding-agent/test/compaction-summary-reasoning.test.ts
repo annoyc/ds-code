@@ -15,13 +15,13 @@ vi.mock("@mariozechner/pi-ai", async (importOriginal) => {
 	};
 });
 
-function createModel(reasoning: boolean): Model<"anthropic-messages"> {
+function createModel(reasoning: boolean): Model<"openai-completions"> {
 	return {
 		id: reasoning ? "reasoning-model" : "non-reasoning-model",
 		name: reasoning ? "Reasoning Model" : "Non-reasoning Model",
-		api: "anthropic-messages",
-		provider: "anthropic",
-		baseUrl: "https://api.anthropic.com",
+		api: "openai-completions",
+		provider: "deepseek",
+		baseUrl: "https://api.deepseek.com",
 		reasoning,
 		input: ["text"],
 		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -33,9 +33,9 @@ function createModel(reasoning: boolean): Model<"anthropic-messages"> {
 const mockSummaryResponse: AssistantMessage = {
 	role: "assistant",
 	content: [{ type: "text", text: "## Goal\nTest summary" }],
-	api: "anthropic-messages",
-	provider: "anthropic",
-	model: "claude-sonnet-4-5",
+	api: "openai-completions",
+	provider: "deepseek",
+	model: "deepseek-v4-flash",
 	usage: {
 		input: 10,
 		output: 10,

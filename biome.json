@@ -37,6 +37,7 @@
 			"!**/models.generated.ts",
 			"!packages/web-ui/src/app.css",
 			"!packages/mom/data/**/*",
+			"!references/**/*",
 			"!!**/node_modules"
 		]
 	}

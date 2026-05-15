@@ -1,3 +1,4 @@
+import { RlmRepl } from "./repl.js";
 import type { CreateMessageFn, RlmConfig, RlmUsage, RpcRequest, RpcResponse } from "./types.js";
 
 const DEFAULT_CONFIG: RlmConfig = {
@@ -84,7 +85,6 @@ export class RlmBridge {
 		if (this.depthRemaining === 0) {
 			return this.dispatchLlm(prompt, system);
 		}
-		const { RlmRepl } = await import("./repl.js");
 		const childBridge = new RlmBridge(this.createMessage, this.config, this.depthRemaining - 1);
 		const repl = new RlmRepl(childBridge);
 		await repl.start();

@@ -354,17 +354,17 @@ describe("parseArgs", () => {
 		test("parses multiple flags together", () => {
 			const result = parseArgs([
 				"--provider",
-				"anthropic",
+				"deepseek",
 				"--model",
-				"claude-sonnet",
+				"deepseek-v4-flash",
 				"--print",
 				"--thinking",
 				"high",
 				"@prompt.md",
 				"Do the task",
 			]);
-			expect(result.provider).toBe("anthropic");
-			expect(result.model).toBe("claude-sonnet");
+			expect(result.provider).toBe("deepseek");
+			expect(result.model).toBe("deepseek-v4-flash");
 			expect(result.print).toBe(true);
 			expect(result.thinking).toBe("high");
 			expect(result.fileArgs).toEqual(["prompt.md"]);

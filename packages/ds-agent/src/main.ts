@@ -46,6 +46,8 @@ function parseArgs(argv: string[]): CliArgs {
 				const v = argv[++i];
 				if (isAgentMode(v)) {
 					args.mode = v;
+				} else {
+					console.error(`Warning: Invalid mode "${v}". Valid modes: plan, agent, yolo`);
 				}
 				break;
 			}
@@ -168,12 +170,6 @@ function ensureDeepSeekApiKey(config: DsConfig): void {
 		return;
 	}
 
-	const isDeepSeekModel = config.model.startsWith("deepseek") || !config.model.includes("/");
-
-	if (!isDeepSeekModel) {
-		return;
-	}
-
 	console.error(
 		`\x1b[33m⚠ DEEPSEEK_API_KEY 未设置。请通过以下方式之一配置：\x1b[0m\n` +
 			`\n` +
@@ -219,7 +215,8 @@ async function preflight(config: DsConfig): Promise<void> {
 	} catch (err) {
 		const isAbort = err instanceof DOMException && err.name === "AbortError";
 		const isNetwork =
-			err instanceof TypeError && ((err as any).cause?.code === "ENOTFOUND" || (err as any).cause?.code === "ECONNREFUSED");
+			err instanceof TypeError &&
+			((err as any).cause?.code === "ENOTFOUND" || (err as any).cause?.code === "ECONNREFUSED");
 
 		if (isAbort || isNetwork) {
 			console.error(
@@ -363,9 +360,6 @@ function createModelRouter(
 	| undefined {
 	if (!config.autoModel && !config.autoReasoning) return undefined;
 
-	const isDeepSeekModel = config.model.startsWith("deepseek") || !config.model.includes("/");
-	if (!isDeepSeekModel) return undefined;
-
 	const router = new CostRouter({
 		autoModel: config.autoModel,
 		autoReasoning: config.autoReasoning,
@@ -456,9 +450,11 @@ Modes:
 
 Environment Variables:
   DEEPSEEK_API_KEY            DeepSeek API key
+  DEEPSEEK_BASE_URL           Custom API endpoint
   DS_MODEL                    Default model
   DS_REASONING_EFFORT         Default reasoning effort
   DS_MODE                     Default mode
+  DS_COST_CURRENCY            Cost display currency (usd/cny)
 
 Examples:
   ${APP_NAME}                          Start interactive session

@@ -265,7 +265,7 @@ export function createDsExtensionFactory(config: DsConfig, sharedCostTracker?: C
 		});
 
 		pi.registerCommand("snapshot-restore", {
-			description: "Restore a SideGit snapshot by turn ID (e.g. /snapshot-restore turn-3)",
+			description: "Restore the latest SideGit snapshot",
 			handler: async () => {
 				const snapshots = await sideGit.listSnapshots();
 				if (snapshots.length === 0) {
@@ -407,8 +407,6 @@ function registerSubAgentTools(pi: ExtensionAPI, config: DsConfig): void {
 			sessionBootId: randomUUID(),
 		},
 		async (ctx) => {
-			const prompt = `${ctx.systemPrompt}\n\n---\n\nTask:\n${ctx.info.prompt}`;
-
 			const response = await createMessage({
 				model: ctx.info.model,
 				system: ctx.systemPrompt,
@@ -419,7 +417,6 @@ function registerSubAgentTools(pi: ExtensionAPI, config: DsConfig): void {
 				stream: false,
 			});
 
-			void prompt;
 			return parseSubAgentResult(response.content);
 		},
 	);
